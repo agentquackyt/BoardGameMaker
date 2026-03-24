@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Card Designer</title>
+    <link rel="stylesheet" href="./css/index.css">
+    <link rel="stylesheet"
+        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@40,400,1,0&icon_names=redo,undo" />
+</head>
+
+<body>
+    <header>
+        <div class="header-info">
+            <h2>Card Designer</h2>
+            <span class="header-deck" id="header-deck-name">New Deck</span>
+            <span class="header-card-size" id="header-card-size">63.5 × 88.9 mm</span>
+        </div>
+        <div class="header-actions">
+            <div class="header-menu" data-header-menu="file">
+                <button type="button" class="header-menu-toggle" data-menu-toggle="file" aria-haspopup="true"
+                    aria-expanded="false">File</button>
+                <div class="header-menu-panel" data-menu-panel="file" role="menu" aria-label="File actions" hidden>
+                    <button type="button" class="header-menu-item" role="menuitem" data-menu="file"
+                        data-action="new">New Deck</button>
+                    <button type="button" class="header-menu-item" role="menuitem" data-menu="file"
+                        data-action="save">Save</button>
+                    <button type="button" class="header-menu-item" role="menuitem" data-menu="file"
+                        data-action="settings">Page Setup</button>
+                    <button type="button" class="header-menu-item" role="menuitem" data-menu="file"
+                        data-action="open">Load Saved</button>
+                    <button type="button" class="header-menu-item" role="menuitem" data-menu="file"
+                        data-action="import">Import JSON</button>
+                    <button type="button" class="header-menu-item" role="menuitem" data-menu="file"
+                        data-action="export">Export JSON</button>
+                    <button type="button" class="header-menu-item" role="menuitem" data-menu="file"
+                        data-action="print">Print Sheet</button>
+
+                </div>
+            </div>
+            <div class="header-menu" data-header-menu="edit">
+                <button type="button" class="header-menu-toggle" data-menu-toggle="edit" aria-haspopup="true"
+                    aria-expanded="false">Edit</button>
+                <div class="header-menu-panel" data-menu-panel="edit" role="menu" aria-label="Edit actions" hidden>
+                    <button type="button" class="header-menu-item" role="menuitem" data-menu="edit"
+                        data-action="undo">Undo</button>
+                    <button type="button" class="header-menu-item" role="menuitem" data-menu="edit"
+                        data-action="redo">Redo</button>
+                    <button type="button" class="header-menu-item" role="menuitem" data-menu="edit"
+                        data-action="copy-element">Copy Element</button>
+                    <button type="button" class="header-menu-item" role="menuitem" data-menu="edit"
+                        data-action="paste-element">Paste Element</button>
+                    <button type="button" class="header-menu-item" role="menuitem" data-menu="edit"
+                        data-action="copy-template">Copy Sublayout</button>
+                    <button type="button" class="header-menu-item" role="menuitem" data-menu="edit"
+                        data-action="paste-template">Paste Sublayout</button>
+                    <button type="button" class="header-menu-item" role="menuitem" data-menu="edit"
+                        data-action="duplicate-element">Duplicate Element</button>
+                    <button type="button" class="header-menu-item" role="menuitem" data-menu="edit"
+                        data-action="delete-element">Delete Element</button>
+                </div>
+            </div>
+            <div class="header-menu" data-header-menu="view">
+                <button type="button" class="header-menu-toggle" data-menu-toggle="view" aria-haspopup="true"
+                    aria-expanded="false">View</button>
+                <div class="header-menu-panel" data-menu-panel="view" role="menu" aria-label="View actions" hidden>
+                    <button type="button" class="header-menu-item" role="menuitem" data-menu="view"
+                        data-action="single">Single Card</button>
+                    <button type="button" class="header-menu-item" role="menuitem" data-menu="view"
+                        data-action="deck">Deck Grid</button>
+                </div>
+            </div>
+        </div>
+        <div class="inline-actions">
+            <button class="btn btn-ghost" id="undo-btn">
+                <span class="material-symbols-rounded">undo</span>
+            </button>
+            <button class="btn btn-ghost" id="redo-btn">
+                <span class="material-symbols-rounded">redo</span>
+            </button>
+        </div>
+    </header>
+    <div class="flex row grow gap-3">
+        <aside class="designer-sidebar">
+            <div class="sidebar-tabs">
+                <button class="tab-btn active" data-sidebar-tab="document">Document</button>
+                <button class="tab-btn" data-sidebar-tab="elements">Elements</button>
+                <button class="tab-btn" data-sidebar-tab="data">Data</button>
+            </div>
+
+            <section class="tab-content active" data-sidebar-content="document">
+                <h3>Sublayouts</h3>
+                <label class="field">
+                    <span>Active Sublayout</span>
+                    <select id="template-select"></select>
+                </label>
+                <div class="inline-actions wrap">
+                    <button class="btn btn-primary" id="add-template-btn">Add</button>
+                    <button class="btn btn-ghost" id="duplicate-template-btn">Duplicate</button>
+                    <button class="btn btn-ghost" id="rename-template-btn">Rename</button>
+                    <button class="btn btn-ghost" id="delete-template-btn">Delete</button>
+                </div>
+
+                <div class="divider"></div>
+                <h3>Grid & History</h3>
+                <label class="field checkbox">
+                    <input type="checkbox" id="snap-enabled-input" checked>
+                    <span>Snap To Grid</span>
+                </label>
+                <label class="field">
+                    <span>Grid Size (mm)</span>
+                    <input type="number" id="grid-size-input" min="0.5" step="0.5" value="1">
+                </label>
+            </section>
+
+            <section class="tab-content" data-sidebar-content="elements">
+                <h3>Layout Elements</h3>
+                <div class="inline-actions wrap">
+                    <button class="btn btn-primary" id="add-text-btn">Add Text</button>
+                    <button class="btn btn-primary" id="add-image-btn">Add Image</button>
+                    <button class="btn btn-ghost" id="duplicate-element-btn">Duplicate</button>
+                    <button class="btn btn-ghost" id="delete-element-btn">Delete</button>
+                </div>
+
+                <div class="divider"></div>
+
+                <h3>Selected Element</h3>
+                <p class="selection-hint" id="element-selection-hint">Tip: select an overlay on the card to edit it.
+                    Copy with Cmd/Ctrl+C and paste with Cmd/Ctrl+V.</p>
+                <div class="no-selection hidden">
+                    <label class="field">
+                        <span>Type</span>
+                        <input type="text" id="element-type-input" readonly>
+                    </label>
+                    <label class="field">
+                        <span>Content</span>
+                        <textarea id="element-content-input" rows="2" placeholder="Plain text or {variable}"></textarea>
+                    </label>
+                    <label class="field">
+                        <span>Image Media</span>
+                        <select id="element-media-select"></select>
+                    </label>
+                    <div class="inline-actions">
+                        <button class="btn btn-ghost" id="upload-element-media-btn">Upload Image</button>
+                        <button class="btn btn-ghost" id="clear-element-media-btn">Clear</button>
+                    </div>
+                    <div class="grid-two">
+                        <label class="field">
+                            <span>X (mm)</span>
+                            <input type="number" id="element-x-input" step="0.5">
+                        </label>
+                        <label class="field">
+                            <span>Y (mm)</span>
+                            <input type="number" id="element-y-input" step="0.5">
+                        </label>
+                        <label class="field">
+                            <span>Width (mm)</span>
+                            <input type="number" id="element-width-input" min="1" step="0.5">
+                        </label>
+                        <label class="field">
+                            <span>Height (mm)</span>
+                            <input type="number" id="element-height-input" min="1" step="0.5">
+                        </label>
+                    </div>
+                    <label class="field checkbox">
+                        <input type="checkbox" id="element-centered-input">
+                        <span>Centered</span>
+                    </label>
+                    <label class="field">
+                        <span>Text Color</span>
+                        <input type="color" id="element-color-picker-input" value="#111111">
+                        <input type="text" id="element-color-input" placeholder="#111111">
+                    </label>
+                    <label class="field">
+                        <span>Background Color</span>
+                        <input type="color" id="element-bg-color-picker-input" value="#ffffff">
+                        <input type="text" id="element-bg-input" placeholder="transparent or linear-gradient(...)">
+                    </label>
+                    <label class="field">
+                        <span>Background Media</span>
+                        <select id="element-bg-media-select"></select>
+                    </label>
+                    <div class="inline-actions">
+                        <button class="btn btn-ghost" id="upload-element-bg-btn">Upload BG</button>
+                        <button class="btn btn-ghost" id="clear-element-bg-media-btn">Clear</button>
+                    </div>
+                    <label class="field">
+                        <span>Custom CSS (one per line)</span>
+                        <textarea id="element-style-input" rows="3"></textarea>
+                    </label>
+
+                    <div class="inline-actions wrap">
+                        <button class="btn btn-ghost" id="layer-front-btn">Front</button>
+                        <button class="btn btn-ghost" id="layer-forward-btn">Forward</button>
+                        <button class="btn btn-ghost" id="layer-backward-btn">Backward</button>
+                        <button class="btn btn-ghost" id="layer-back-btn">Back</button>
+                    </div>
+
+                </div>
+            </section>
+
+            <section class="tab-content" data-sidebar-content="data">
+                <h3>Variables</h3>
+                <label class="field">
+                    <span>New Variable</span>
+                    <div class="inline-actions">
+                        <input type="text" id="new-variable-input" placeholder="e.g. attack">
+                        <button class="btn btn-ghost" id="add-variable-btn">Add</button>
+                    </div>
+                </label>
+                <label class="field">
+                    <span>Delete Variable</span>
+                    <div class="inline-actions">
+                        <select id="variable-select"></select>
+                        <button class="btn btn-ghost" id="delete-variable-btn">Delete</button>
+                    </div>
+                </label>
+
+                <div class="divider"></div>
+
+                <h3>Rows</h3>
+                <div class="table-wrap">
+                    <table id="data-table"></table>
+                </div>
+                <div class="inline-actions">
+                    <button class="btn btn-ghost" id="add-row-btn">Add Row</button>
+                    <button class="btn btn-ghost" id="remove-row-btn">Remove Row</button>
+                </div>
+            </section>
+
+            <footer class="sidebar-footer">
+                <p class="status-text" id="status-label">Ready</p>
+            </footer>
+        </aside>
+        <main class="flex column">
+            <div class="render-options pill-btn-group">
+                <button class="pill-btn active" data-view-mode="single">View single card</button>
+                <button class="pill-btn" data-view-mode="deck">View card deck</button>
+            </div>
+            <div class="render-card" id="render-card"></div>
+        </main>
+    </div>
+    <input type="file" id="import-json-file" accept="application/json" hidden>
+    <input type="file" id="media-upload-input" accept="image/*" hidden>
+    <dialog id="saved-decks-modal" class="saved-decks-modal">
+        <div class="saved-decks-modal-shell">
+            <header class="saved-decks-header">
+                <div>
+                    <h3>Restore Saved Deck</h3>
+                    <p>Choose a saved designer deck to restore it instantly.</p>
+                </div>
+                <button type="button" class="btn btn-ghost" id="saved-decks-close-btn"
+                    aria-label="Close saved decks modal">Close</button>
+            </header>
+            <div id="saved-decks-grid" class="saved-decks-grid"></div>
+        </div>
+    </dialog>
+    <dialog id="designer-dialog" class="designer-dialog">
+        <form method="dialog" class="dialog-form">
+            <h3 id="dialog-title">Action</h3>
+            <p id="dialog-message" class="dialog-message"></p>
+            <label class="field" id="dialog-text-field">
+                <span id="dialog-text-label">Value</span>
+                <input type="text" id="dialog-text-input">
+            </label>
+            <label class="field" id="dialog-select-field">
+                <span id="dialog-select-label">Choose</span>
+                <select id="dialog-select-input"></select>
+            </label>
+            <div class="dialog-actions">
+                <button type="button" class="btn btn-ghost" id="dialog-cancel-btn">Cancel</button>
+                <button type="button" class="btn btn-primary" id="dialog-confirm-btn">Confirm</button>
+            </div>
+        </form>
+    </dialog>
+    <div id="toast-stack" class="toast-stack" aria-live="polite" aria-atomic="false"></div>
+    <script src="./entry.ts"></script>
+</body>
+
+</html>

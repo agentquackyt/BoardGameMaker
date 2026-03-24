@@ -1,0 +1,94 @@
+html,
+body {
+	margin: 0;
+	min-height: 100%;
+}
+
+body.blockly-demo-body {
+	background: linear-gradient(135deg, #f6f2e8 0%, #edf3ff 100%);
+	color: #1f2a44;
+}
+
+.blockly-demo-shell {
+	display: grid;
+	grid-template-columns: minmax(320px, 2fr) minmax(280px, 1fr);
+	gap: 16px;
+	min-height: 100vh;
+	padding: 16px;
+	box-sizing: border-box;
+}
+
+.blockly-demo-panel {
+	display: grid;
+	grid-template-rows: auto 1fr;
+	gap: 12px;
+	padding: 16px;
+	border-radius: 20px;
+}
+
+.blockly-demo-panel--workspace {
+	background: rgba(255, 255, 255, 0.9);
+	box-shadow: 0 20px 60px rgba(35, 45, 75, 0.12);
+}
+
+.blockly-demo-panel--preview {
+	background: #101827;
+	color: #e5eefc;
+	box-shadow: 0 20px 60px rgba(16, 24, 39, 0.2);
+}
+
+.blockly-demo-title,
+.blockly-demo-preview-title {
+	margin: 0;
+}
+
+.blockly-demo-title__heading {
+	margin: 0 0 6px;
+	font: 700 28px/1.1 Georgia, serif;
+	color: #1f2a44;
+}
+
+.blockly-demo-title__text {
+	margin: 0;
+	color: #5a667d;
+	font: 500 14px/1.5 system-ui, sans-serif;
+}
+
+.blockly-demo-preview-title__heading {
+	margin: 0 0 6px;
+	font: 700 20px/1.2 system-ui, sans-serif;
+}
+
+.blockly-demo-preview-title__text {
+	margin: 0;
+	color: #9eb0cf;
+	font: 500 14px/1.5 system-ui, sans-serif;
+}
+
+.blockly-demo-workspace {
+	width: 100%;
+	height: 520px;
+	overflow: hidden;
+	border-radius: 16px;
+	border: 1px solid rgba(50, 70, 110, 0.12);
+}
+
+.blockly-demo-preview-code {
+	margin: 0;
+	padding: 16px;
+	border-radius: 16px;
+	background: rgba(255, 255, 255, 0.06);
+	overflow: auto;
+	white-space: pre-wrap;
+	font: 500 14px/1.6 Menlo, Consolas, monospace;
+}
+
+@media (max-width: 900px) {
+	.blockly-demo-shell {
+		grid-template-columns: 1fr;
+	}
+
+	.blockly-demo-workspace {
+		height: 460px;
+	}
+}
