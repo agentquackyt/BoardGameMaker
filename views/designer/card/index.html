@@ -80,6 +80,8 @@
                 <span class="material-symbols-rounded">redo</span>
             </button>
         </div>
+        <p class="status-text" id="status-label">Ready</p>
+
     </header>
     <div class="flex row grow gap-3">
         <aside class="designer-sidebar">
@@ -98,7 +100,7 @@
                 <div class="inline-actions wrap">
                     <button class="btn btn-primary" id="add-template-btn">Add</button>
                     <button class="btn btn-ghost" id="duplicate-template-btn">Duplicate</button>
-                    <button class="btn btn-ghost" id="rename-template-btn">Rename</button>
+                    <button class="btn btn-ghost" id="rename-template-btn">Edit</button>
                     <button class="btn btn-ghost" id="delete-template-btn">Delete</button>
                 </div>
 
@@ -201,37 +203,15 @@
             </section>
 
             <section class="tab-content" data-sidebar-content="data">
-                <h3>Variables</h3>
-                <label class="field">
-                    <span>New Variable</span>
-                    <div class="inline-actions">
-                        <input type="text" id="new-variable-input" placeholder="e.g. attack">
-                        <button class="btn btn-ghost" id="add-variable-btn">Add</button>
-                    </div>
-                </label>
-                <label class="field">
-                    <span>Delete Variable</span>
-                    <div class="inline-actions">
-                        <select id="variable-select"></select>
-                        <button class="btn btn-ghost" id="delete-variable-btn">Delete</button>
-                    </div>
-                </label>
-
-                <div class="divider"></div>
-
-                <h3>Rows</h3>
+                <h3>Cards</h3>
                 <div class="table-wrap">
-                    <table id="data-table"></table>
+                    <div id="row-card-grid" class="row-card-grid"></div>
                 </div>
                 <div class="inline-actions">
                     <button class="btn btn-ghost" id="add-row-btn">Add Row</button>
                     <button class="btn btn-ghost" id="remove-row-btn">Remove Row</button>
                 </div>
             </section>
-
-            <footer class="sidebar-footer">
-                <p class="status-text" id="status-label">Ready</p>
-            </footer>
         </aside>
         <main class="flex column">
             <div class="render-options pill-btn-group">

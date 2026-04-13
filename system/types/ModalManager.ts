@@ -1,4 +1,4 @@
-type ModalDataType = 'text' | 'number' | 'color' | 'boolean' | 'mm' | 'select';
+type ModalDataType = 'text' | 'number' | 'color' | 'boolean' | 'mm' | 'select' | 'chip';
 
 interface ModalField {
     label: string;
@@ -119,6 +119,12 @@ class Modal {
         return this;
     }
 
+    addChipField(label: string, defaultValue?: string[], required: boolean = false): Modal {
+        // Text field with comma-separated values, which will be split into an array
+        this.fields.push({ label, key: label.toLowerCase().replace(' ', '_'), type: 'chip', required, defaultValue });
+        return this;
+    }
+
     setConditionalField(label: string, conditionLabel: string, conditionValue: any): Modal {
         const field = this.fields.find(f => f.label === label);
         if (field) {
@@ -141,8 +147,11 @@ class Modal {
         fields.forEach(field => {
             const label = document.createElement('label');
             label.classList.add('field')
+            if (field.type === 'chip') {
+                label.classList.add('has-chips');
+            }
             const spanElement = document.createElement('span');
-            spanElement.textContent = field.label + (field.required ? ' *' : '');
+            spanElement.textContent = field.label + (field.required ? ' *' : '') + (field.type === 'chip' ? ' (comma-separated)' : '');
             label.appendChild(spanElement);
 
             let input: HTMLInputElement | HTMLSelectElement;
@@ -180,11 +189,48 @@ class Modal {
                         input.appendChild(optionElement);
                     });
                     break;
-
+                case 'chip':
+                        input = document.createElement('input');
+                        input.type = 'text';
+                        input.placeholder = 'Enter values separated by commas';
+                        if (Array.isArray(field.defaultValue)) {
+                            input.value = (field.defaultValue as string[]).join(', ');
+                        }
+                        // create a single chips container and update it on input
+                        const chipsContainerInit = document.createElement('div');
+                        chipsContainerInit.className = 'chip-container';
+                        // initialize from default value
+                        if (Array.isArray(field.defaultValue)) {
+                            (field.defaultValue as string[]).forEach(val => {
+                                const chip = document.createElement('span');
+                                chip.className = 'chip';
+                                chip.textContent = val;
+                                chipsContainerInit.appendChild(chip);
+                            });
+                        }
+                        input.addEventListener('input', () => {
+                            const chips = (input as HTMLInputElement).value.split(',').map(s => s.trim()).filter(s => s.length > 0);
+                            chipsContainerInit.replaceChildren();
+                            chips.forEach(val => {
+                                const chip = document.createElement('span');
+                                chip.className = 'chip';
+                                chip.textContent = val;
+                                chipsContainerInit.appendChild(chip);
+                            });
+                        });
+                        // append the initialized chips container into the label so it's visible
+                        label.appendChild(chipsContainerInit);
+                    break;
                 default:
                     throw new Error(`Unsupported field type: ${field.type}`);
             }
-            input.value = field.defaultValue !== undefined ? field.defaultValue : (field.type === 'boolean' ? 'false' : '');
+            if (field.type === 'boolean') {
+                (input as HTMLInputElement).checked = Boolean(field.defaultValue);
+            } else if (field.defaultValue !== undefined) {
+                input.value = String(field.defaultValue);
+            } else {
+                input.value = '';
+            }
 
             label.appendChild(input);
             if (field.type === 'color') {
@@ -255,6 +301,20 @@ class Modal {
             }
 
             modalBody.appendChild(label);
+            // append chips container if field is chip (we initialized it above)
+            if (field.type === 'chip') {
+                const existingInput = label.querySelector('input') as HTMLInputElement | null;
+                if (existingInput) {
+                    // Find the chips container we created earlier in the switch scope via DOM traversal; if not found, create one
+                    let existing = label.querySelector('.chip-container') as HTMLElement | null;
+                    if (!existing) {
+                        // create empty container
+                        const fallback = document.createElement('div');
+                        fallback.className = 'chip-container';
+                        label.appendChild(fallback);
+                    }
+                }
+            }
         });
 
         return modalBody;
@@ -275,11 +335,27 @@ class Modal {
             const submitButton = this.modalElement.querySelector('.modal-submit') as HTMLButtonElement;
             submitButton.onclick = () => {
                 const formData: { [key: string]: any } = {};
-                this.fields.forEach((field, index) => {
-                    const input = this.modalElement.querySelectorAll('.modal-body input')[index] as HTMLInputElement;
-                    formData[field.label] = field.type === 'boolean' ? input.checked : input.value;
-                    if (field.type === 'mm' || field.type === 'number') {
-                        formData[field.label] = parseFloat(input.value);
+                this.fields.forEach((field) => {
+                    const label = this.modalElement.querySelector(`label[data-field-label="${field.label}"]`);
+                    if (!label) {
+                        formData[field.label] = null;
+                        return;
+                    }
+                    const inputEl = label.querySelector('input, select') as HTMLInputElement | HTMLSelectElement | null;
+                    if (!inputEl) {
+                        formData[field.label] = null;
+                        return;
+                    }
+
+                    if (field.type === 'boolean') {
+                        formData[field.label] = (inputEl as HTMLInputElement).checked;
+                    } else if (field.type === 'mm' || field.type === 'number') {
+                        formData[field.label] = parseFloat((inputEl as HTMLInputElement).value);
+                    } else if (field.type === 'chip') {
+                        const raw = (inputEl as HTMLInputElement).value;
+                        formData[field.label] = raw.split(',').map(s => s.trim()).filter(s => s.length > 0);
+                    } else {
+                        formData[field.label] = (inputEl as HTMLInputElement).value;
                     }
                 });
                 submitButton.onclick = null; // Remove event listener

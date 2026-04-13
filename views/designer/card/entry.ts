@@ -5,7 +5,8 @@ import {
     type CardStyleInterface
 } from "../../../system/boardgame/cards/Card";
 import { CardDeck } from "../../../system/boardgame/cards/CardDeck";
-import { openSettingsModal } from "./ts/CardDeckSetup";
+import { openSettingsModal, openNewCardModal } from "./ts/CardDeckSetup";
+import Modal from "../../../system/types/ModalManager";
 import { 
     type EditorTemplate, 
     type EditorLayoutElement, 
@@ -134,9 +135,9 @@ function getDomRefs() {
         snapEnabledInput: document.getElementById("snap-enabled-input") as HTMLInputElement,
         gridSizeInput: document.getElementById("grid-size-input") as HTMLInputElement,
         statusLabel: document.getElementById("status-label") as HTMLParagraphElement,
-        newVariableInput: document.getElementById("new-variable-input") as HTMLInputElement,
-        variableSelect: document.getElementById("variable-select") as HTMLSelectElement,
-        dataTable: document.getElementById("data-table") as HTMLTableElement,
+        newVariableInput: document.getElementById("new-variable-input") as HTMLInputElement | null,
+        variableSelect: document.getElementById("variable-select") as HTMLSelectElement | null,
+        dataTable: document.getElementById("row-card-grid") as HTMLDivElement,
         importJsonFile: document.getElementById("import-json-file") as HTMLInputElement,
         mediaUploadInput: document.getElementById("media-upload-input") as HTMLInputElement,
         tabButtons: Array.from(document.querySelectorAll("[data-sidebar-tab]")) as HTMLButtonElement[],
@@ -200,9 +201,7 @@ function getDomRefs() {
         [refs.elementBgColorPickerInput, "id:element-bg-color-picker-input"],
         [refs.elementBgInput, "id:element-bg-input"],
         [refs.elementStyleInput, "id:element-style-input"],
-        [refs.gridSizeInput, "id:grid-size-input"],
-        [refs.newVariableInput, "id:new-variable-input"],
-        [refs.variableSelect, "id:variable-select"]
+        [refs.gridSizeInput, "id:grid-size-input"]
     ];
 
     focusMap.forEach(([element, key]) => {
@@ -261,12 +260,23 @@ function bindEvents() {
         renderAll();
     });
 
-    dom.addTemplateBtn.addEventListener("click", () => {
+    dom.addTemplateBtn.addEventListener("click", async () => {
+        const templateCount = state.doc.templates.length + 1;
+        const modal = new Modal('New Sublayout', 'Create a new sublayout')
+            .addTextField('Sublayout Name', `Layout ${templateCount}`, true)
+            .addChipField('Variables', []);
+
+        const result = await modal.show();
+        if (!result) return;
+
+        const name = String(result['Sublayout Name'] || `Layout ${templateCount}`).trim();
+        const vars = Array.isArray(result['Variables']) ? result['Variables'].map(String) : [];
+
         applyMutation(() => {
-            const templateCount = state.doc.templates.length + 1;
-            const newTemplate = createDefaultTemplate(`Layout ${templateCount}`);
+            const newTemplate = createDefaultTemplate(name);
             newTemplate.spec.width = getActiveTemplate().spec.width;
             newTemplate.spec.height = getActiveTemplate().spec.height;
+            newTemplate.variables = vars;
             state.doc.templates.push(newTemplate);
             state.doc.activeTemplateId = newTemplate.id;
             state.selectedElementIndex = newTemplate.spec.layout.length > 0 ? 0 : null;
@@ -290,21 +300,34 @@ function bindEvents() {
 
     dom.renameTemplateBtn.addEventListener("click", async () => {
         const current = getActiveTemplate();
-        const name = await askTextValue({
-            title: "Rename Sublayout",
-            message: "Enter a name for this sublayout.",
-            label: "Sublayout Name",
-            defaultValue: current.name,
-            confirmLabel: "Rename"
-        });
-        if (!name) {
+        const modal = new Modal('Edit Sublayout', 'Edit sublayout name and variables')
+            .addTextField('Sublayout Name', current.name, true)
+            .addChipField('Variables', current.variables ?? []);
+
+        const result = await modal.show();
+        if (!result) {
             return;
         }
 
         applyMutation(() => {
-            current.name = name.trim() || current.name;
+            const newName = String(result['Sublayout Name'] || current.name).trim();
+            current.name = newName || current.name;
+            const vars = Array.isArray(result['Variables']) ? result['Variables'].map(String) : [];
+            current.variables = vars;
+            // ensure existing rows for this template have fields for variables
+            for (let i = 0; i < state.doc.sampleRows.length; i++) {
+                if (state.doc.rowTemplateIds[i] === current.id) {
+                    const row = state.doc.sampleRows[i];
+                    if (!row) continue;
+                    for (const v of vars) {
+                        if (!(v in row)) {
+                            row[v] = "";
+                        }
+                    }
+                }
+            }
         });
-        setStatus("Sublayout renamed");
+        setStatus("Sublayout updated");
     });
 
     dom.deleteTemplateBtn.addEventListener("click", () => {
@@ -549,30 +572,42 @@ function bindEvents() {
     dom.undoBtn.addEventListener("click", undo);
     dom.redoBtn.addEventListener("click", redo);
 
-    dom.addVariableBtn.addEventListener("click", () => {
-        const variable = (dom?.newVariableInput.value || "").trim();
+    if (dom.addVariableBtn) {
+        dom.addVariableBtn.addEventListener("click", () => {
+        const variable = (dom?.newVariableInput!.value || "").trim();
         if (!variable) {
             return;
         }
-        if (state.doc.variables.includes(variable)) {
-            setStatus("Variable already exists");
+
+        const active = getActiveTemplate();
+        if (active.variables.includes(variable)) {
+            setStatus("Variable already exists in this layout");
             return;
         }
 
         applyMutation(() => {
-            state.doc.variables.push(variable);
-            for (const row of state.doc.sampleRows) {
-                row[variable] = "";
+            // add to template variables
+            const tmpl = getTemplateById(state.doc.activeTemplateId);
+            tmpl.variables.push(variable);
+            // add empty values for rows that use this template
+            for (let i = 0; i < state.doc.sampleRows.length; i++) {
+                if (state.doc.rowTemplateIds[i] === tmpl.id) {
+                    const row = state.doc.sampleRows[i];
+                    if (!row) continue;
+                    row[variable] = "";
+                }
             }
         });
 
         if (dom) {
-            dom.newVariableInput.value = "";
+            dom.newVariableInput!.value = "";
         }
-    });
+        });
+    }
 
-    dom.deleteVariableBtn.addEventListener("click", () => {
-        const variable = dom?.variableSelect.value;
+    if (dom.deleteVariableBtn) {
+        dom.deleteVariableBtn.addEventListener("click", () => {
+        const variable = dom?.variableSelect?.value;
         if (!variable) {
             setStatus("No variable selected");
             return;
@@ -583,28 +618,66 @@ function bindEvents() {
         }
 
         applyMutation(() => {
-            state.doc.variables = state.doc.variables.filter((name) => name !== variable);
-            for (const row of state.doc.sampleRows) {
-                delete row[variable];
+            const tmpl = getTemplateById(state.doc.activeTemplateId);
+            tmpl.variables = tmpl.variables.filter((name) => name !== variable);
+            // remove from rows that use this template
+            for (let i = 0; i < state.doc.sampleRows.length; i++) {
+                if (state.doc.rowTemplateIds[i] === tmpl.id) {
+                    const row = state.doc.sampleRows[i];
+                    if (!row) continue;
+                    delete row[variable];
+                }
             }
         });
-    });
+        });
+    }
 
     dom.addRowBtn.addEventListener("click", async () => {
-        const templateId = await askTemplateId();
-        if (!templateId) {
+        // Use modal to collect template (display name only), amount and variable values
+        const templates = state.doc.templates.map((t) => t.name);
+        const variableMap: Record<string, string[]> = {};
+        state.doc.templates.forEach((t) => {
+            variableMap[t.name] = t.variables ?? [];
+        });
+        const result = await openNewCardModal(templates, variableMap);
+        if (!result) {
             setStatus("Row creation canceled", "muted");
             return;
         }
 
+        const rawType = result["Card Type"] ?? "";
+        let templateId: string | null = null;
+        // First try to resolve by displayed name
+        const selectedName = String(rawType);
+        const foundByName = state.doc.templates.find((t) => t.name === selectedName);
+        if (foundByName) {
+            templateId = foundByName.id;
+        } else {
+            // Fallback: maybe the modal returned an id (older behavior)
+            const foundById = state.doc.templates.find((t) => t.id === selectedName);
+            if (foundById) {
+                templateId = foundById.id;
+            }
+        }
+        if (!templateId) {
+            setStatus("Invalid template selected", "error");
+            return;
+        }
+
+        const amountVal = Number(result["Amount of Cards"] ?? 1);
+        const amount = Number.isFinite(amountVal) && amountVal > 0 ? Math.floor(amountVal) : 1;
+
         applyMutation(() => {
             const row: Record<string, string> = {};
-            for (const variable of state.doc.variables) {
-                row[variable] = "";
+            const tmpl = getTemplateById(templateId!);
+            for (const variable of tmpl.variables) {
+                const key = `Variable: ${variable}`;
+                const value = result[key] !== undefined ? String(result[key]) : "";
+                row[variable] = value;
             }
             state.doc.sampleRows.push(row);
             state.doc.rowTemplateIds.push(templateId);
-            state.doc.rowAmounts.push(1);
+            state.doc.rowAmounts.push(amount);
             state.selectedRowIndex = state.doc.sampleRows.length - 1;
         });
     });
@@ -872,7 +945,13 @@ async function runHeaderMenuAction(menu: HeaderMenuKind, action: string) {
         } else if (action === "save") {
             saveDeck();
         } else if (action === "settings") {
-            const settingResult = await openSettingsModal();
+            const active = getActiveTemplate();
+            const settingResult = await openSettingsModal({
+                deckName: state.doc.deckName,
+                backColor: active?.spec.back?.background ?? undefined,
+                width: active?.spec.width,
+                height: active?.spec.height
+            });
             if (settingResult) {
                 applyMutation(() => {
                     // Modal returns a map with labels as keys (Modal.show uses field.label as key)
@@ -1292,8 +1371,13 @@ function sanitizeDocument(document: EditorDocument) {
     const templateIds = new Set(document.templates.map((template) => template.id));
     document.rowTemplateIds = document.rowTemplateIds.map((templateId) => (templateIds.has(templateId) ? templateId : document.activeTemplateId));
 
-    for (const row of document.sampleRows) {
-        for (const variable of document.variables) {
+    for (let i = 0; i < document.sampleRows.length; i++) {
+        const row = document.sampleRows[i];
+        if (!row) continue;
+        const templateId = document.rowTemplateIds[i] ?? document.activeTemplateId;
+        const tmpl = document.templates.find((t) => t.id === templateId);
+        const vars = tmpl?.variables ?? [];
+        for (const variable of vars) {
             if (!(variable in row)) {
                 row[variable] = "";
             }
@@ -1307,8 +1391,14 @@ function parseImportedDocument(raw: unknown): EditorDocument {
         sampleRows?: Record<string, string>[];
     };
 
-    if (parsed.version === 2 && Array.isArray(parsed.templates) && Array.isArray(parsed.sampleRows) && Array.isArray(parsed.variables)) {
+    if (parsed.version === 2 && Array.isArray(parsed.templates) && Array.isArray(parsed.sampleRows)) {
         const document = clone(parsed as EditorDocument);
+        // Ensure templates have variables arrays
+        document.templates.forEach((t) => {
+            if (!Array.isArray((t as any).variables)) {
+                (t as any).variables = [];
+            }
+        });
         sanitizeDocument(document);
         return document;
     }
@@ -1324,6 +1414,8 @@ function parseImportedDocument(raw: unknown): EditorDocument {
                     id: crypto.randomUUID()
                 }))
             }
+            ,
+            variables: []
         };
 
         const variableSet = new Set<string>();
@@ -1331,11 +1423,13 @@ function parseImportedDocument(raw: unknown): EditorDocument {
             Object.keys(row).forEach((key) => variableSet.add(key));
         }
 
+        // attach discovered variables to the template
+        template.variables = Array.from(variableSet);
+
         const document: EditorDocument = {
             version: 2,
             deckName: parsed.deckName || "Imported Deck",
             deckUuid: parsed.deckUuid || crypto.randomUUID(),
-            variables: Array.from(variableSet),
             templates: [template],
             activeTemplateId: template.id,
             rowTemplateIds: parsed.sampleRows.map(() => template.id),
@@ -1846,24 +1940,26 @@ function renderVariableSelect() {
     if (!dom) {
         return;
     }
-
     const variableSelect = dom.variableSelect;
+    if (!variableSelect) return;
+
     const previous = variableSelect.value;
     variableSelect.replaceChildren();
 
     const placeholder = document.createElement("option");
     placeholder.value = "";
-    placeholder.textContent = state.doc.variables.length > 0 ? "Select variable" : "No variables";
+    const active = getActiveTemplate();
+    placeholder.textContent = (active.variables && active.variables.length > 0) ? "Select variable" : "No variables";
     variableSelect.appendChild(placeholder);
 
-    state.doc.variables.forEach((variable) => {
+    (active.variables || []).forEach((variable) => {
         const option = document.createElement("option");
         option.value = variable;
         option.textContent = variable;
         variableSelect.appendChild(option);
     });
 
-    if (state.doc.variables.includes(previous)) {
+    if ((active.variables || []).includes(previous)) {
         variableSelect.value = previous;
     }
 }
@@ -1944,95 +2040,118 @@ function renderDataTable() {
     if (!dom) {
         return;
     }
-
+    // Replace table with a card grid for each sample row
     dom.dataTable.replaceChildren();
-
-    const thead = document.createElement("thead");
-    const header = document.createElement("tr");
-    ["#", "Layout", "Amount", ...state.doc.variables].forEach((title) => {
-        const th = document.createElement("th");
-        th.textContent = title;
-        header.appendChild(th);
-    });
-    thead.appendChild(header);
-    dom.dataTable.appendChild(thead);
-
-    const tbody = document.createElement("tbody");
+    // Use the existing container (`#row-card-grid`) as the grid element
+    const grid = dom.dataTable as HTMLDivElement;
+    grid.classList.add('row-card-grid');
 
     state.doc.sampleRows.forEach((row, rowIndex) => {
-        const tr = document.createElement("tr");
-        tr.style.background = rowIndex === state.selectedRowIndex ? "rgba(77, 128, 255, 0.1)" : "transparent";
-        tr.addEventListener("click", (event) => {
-            if (event.target instanceof HTMLElement && event.target.closest("input, select, textarea, button")) {
-                return;
+        const card = document.createElement('div');
+        card.className = 'row-card';
+        if (rowIndex === state.selectedRowIndex) {
+            card.classList.add('selected');
+        }
+
+        const header = document.createElement('div');
+        header.className = 'row-card-header';
+        
+        const tmplId = state.doc.rowTemplateIds[rowIndex] ?? state.doc.activeTemplateId;
+        const tmpl = getTemplateById(tmplId);
+        const title = document.createElement('div');
+        title.className = 'row-card-title';
+        title.textContent = tmpl ? tmpl.name : 'Unknown Layout';
+        header.appendChild(title);
+
+        const amount = document.createElement('div');
+        amount.className = 'row-card-amount';
+        amount.textContent = `Amount: ${getRowAmount(rowIndex)}`;
+        header.appendChild(amount);
+
+        card.appendChild(header);
+
+        const body = document.createElement('div');
+        body.className = 'row-card-body';
+        // show variables for this template
+        const vars = tmpl?.variables ?? [];
+        vars.forEach((variable) => {
+            const p = document.createElement('div');
+            p.className = 'row-card-var';
+            p.textContent = `${variable}: ${row[variable] ?? ''}`;
+            body.appendChild(p);
+        });
+        card.appendChild(body);
+
+        const actions = document.createElement('div');
+        actions.className = 'row-card-actions';
+
+        const editBtn = document.createElement('button');
+        editBtn.className = 'btn btn-primary';
+        editBtn.textContent = 'Edit';
+        editBtn.addEventListener('click', async (e) => {
+            e.stopPropagation();
+            // open modal prefilled with this row's data
+            const templates = state.doc.templates.map((t) => t.name);
+            const variableMap: Record<string, string[]> = {};
+            state.doc.templates.forEach((t) => { variableMap[t.name] = t.variables ?? []; });
+
+            const initial: Record<string, any> = {};
+            initial['Amount of Cards'] = getRowAmount(rowIndex);
+            initial['Card Type'] = tmpl ? tmpl.name : templates[0];
+            for (const v of vars) {
+                initial[`Variable: ${v}`] = row[v] ?? '';
             }
+
+            const result = await openNewCardModal(templates, variableMap, initial);
+            if (!result) return;
+
+            const selectedName = String(result['Card Type'] ?? '');
+            const found = state.doc.templates.find((t) => t.name === selectedName) ?? state.doc.templates.find((t) => t.id === selectedName);
+            if (!found) return;
+
+            applyMutation(() => {
+                // update template id and amount
+                state.doc.rowTemplateIds[rowIndex] = found.id;
+                state.doc.rowAmounts[rowIndex] = Number.isFinite(Number(result['Amount of Cards'])) ? Math.floor(Number(result['Amount of Cards'])) : 1;
+                // update variables for this row
+                for (const v of found.variables) {
+                    const key = `Variable: ${v}`;
+                    const targetRow = state.doc.sampleRows[rowIndex] ?? (state.doc.sampleRows[rowIndex] = {});
+                    targetRow[v] = result[key] !== undefined ? String(result[key]) : '';
+                }
+                state.selectedRowIndex = rowIndex;
+            });
+        });
+
+        const delBtn = document.createElement('button');
+        delBtn.className = 'btn btn-secondary';
+        delBtn.textContent = 'Delete';
+        delBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (!confirm('Delete this row?')) return;
+            applyMutation(() => {
+                state.doc.sampleRows.splice(rowIndex, 1);
+                state.doc.rowTemplateIds.splice(rowIndex, 1);
+                state.doc.rowAmounts.splice(rowIndex, 1);
+                state.selectedRowIndex = Math.max(0, state.selectedRowIndex - 1);
+            });
+        });
+
+        actions.appendChild(editBtn);
+        actions.appendChild(delBtn);
+        card.appendChild(actions);
+
+        // click to select
+        card.addEventListener('click', () => {
             state.selectedRowIndex = rowIndex;
             renderCanvas();
             renderDataTable();
         });
 
-        const indexCell = document.createElement("td");
-        indexCell.textContent = String(rowIndex + 1);
-        tr.appendChild(indexCell);
-
-        const layoutCell = document.createElement("td");
-        const layoutSelect = document.createElement("select");
-        state.doc.templates.forEach((template) => {
-            const option = document.createElement("option");
-            option.value = template.id;
-            option.textContent = template.name;
-            layoutSelect.appendChild(option);
-        });
-        layoutSelect.dataset.focusKey = `row:${rowIndex}:layout`;
-        layoutSelect.value = state.doc.rowTemplateIds[rowIndex] || state.doc.activeTemplateId;
-        layoutSelect.addEventListener("mousedown", (event) => event.stopPropagation());
-        layoutSelect.addEventListener("click", (event) => event.stopPropagation());
-        layoutSelect.addEventListener("change", () => {
-            applyMutation(() => {
-                state.doc.rowTemplateIds[rowIndex] = layoutSelect.value;
-            });
-        });
-        layoutCell.appendChild(layoutSelect);
-        tr.appendChild(layoutCell);
-
-        const amountCell = document.createElement("td");
-        const amountInput = document.createElement("input");
-        amountInput.type = "number";
-        amountInput.min = "1";
-        amountInput.step = "1";
-        amountInput.dataset.focusKey = `row:${rowIndex}:amount`;
-        amountInput.value = String(getRowAmount(rowIndex));
-        amountInput.addEventListener("mousedown", (event) => event.stopPropagation());
-        amountInput.addEventListener("click", (event) => event.stopPropagation());
-        amountInput.addEventListener("change", () => {
-            applyMutation(() => {
-                state.doc.rowAmounts[rowIndex] = normalizeRowAmount(amountInput.value);
-            });
-        });
-        amountCell.appendChild(amountInput);
-        tr.appendChild(amountCell);
-
-        state.doc.variables.forEach((variable) => {
-            const td = document.createElement("td");
-            const input = document.createElement("input");
-            input.dataset.focusKey = `row:${rowIndex}:var:${variable}`;
-            input.value = row[variable] ?? "";
-            input.addEventListener("mousedown", (event) => event.stopPropagation());
-            input.addEventListener("click", (event) => event.stopPropagation());
-            input.addEventListener("input", () => {
-                row[variable] = input.value;
-                state.dirty = true;
-                renderCanvas();
-                renderToolbarState();
-            });
-            td.appendChild(input);
-            tr.appendChild(td);
-        });
-
-        tbody.appendChild(tr);
+        grid.appendChild(card);
     });
 
-    dom.dataTable.appendChild(tbody);
+    // cards have already been appended to `grid` (which is `dom.dataTable`)
 }
 
 function renderCanvas() {

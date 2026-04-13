@@ -175,7 +175,7 @@ header h2 {
     border-bottom: 1px solid rgba(0, 0, 0, 0.08);
     position: sticky;
     top: 0;
-    background: var(--background);
+    background: var(--background-secondary);
     z-index: 2;
 }
 
@@ -244,7 +244,7 @@ header h2 {
 }
 
 /* The Absolute Label */
-.field span {
+.field span:not(.chip) {
     position: absolute;
     top: 0.5rem;
     left: 0.75rem;
@@ -361,9 +361,6 @@ header h2 {
 .table-wrap {
     max-width: 100%;
     overflow: auto;
-    border: 1px solid rgba(0, 0, 0, 0.12);
-    border-radius: 0.7rem;
-    background: white;
 }
 
 #data-table {
@@ -402,19 +399,84 @@ header h2 {
     transition: background 0.2s ease-in-out;
     border: none;
     font-size: 0.83rem;
+    user-select: none;
+    outline: none;
 }
 
 .btn.btn-ghost {
     background: transparent;
     color: var(--text-secondary);
+    border-radius: 9999px;
 }
 
 .btn.btn-ghost:hover {
-    background: rgba(0, 0, 0, 0.03);
+    background: rgba(0, 0, 0, 0.076);
 }
 
 .btn.btn-ghost:active {
     background: rgba(0, 0, 0, 0.05);
+}
+
+/* Row card grid for sample rows */
+.row-card-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+    padding: 8px 0;
+    align-items: start;
+}
+
+.row-card {
+    background: var(--background-secondary);
+    color: var(--text-primary);
+    border-radius: 1rem;
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    cursor: pointer;
+    height: 100%;
+    width: 100%;
+}
+
+.row-card.selected {
+    background: var(--background);
+}
+
+.row-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+}
+
+.row-card-title { font-weight: 600; }
+.row-card-amount { color: var(--text-secondary); font-size: 0.9rem; }
+
+.row-card-body { display: flex; flex-direction: column; gap: 6px; }
+.row-card-var { font-size: 0.88rem; color: var(--text-secondary); }
+
+.row-card-actions { display: flex; gap: 6px; justify-content: flex-end; }
+
+/* Chip styles used by modal chip input */
+.chip-container { display:flex; flex-wrap:wrap; gap:6px; margin-top:6px; }
+.chip { background: rgba(0,0,0,0.06); padding: 4px 8px; border-radius: 999px; font-size:0.85rem; }
+.modal-body label .chip { background: var(--background); color: var(--text); }
+
+/* Layout adjustments for fields that contain chips */
+.field.has-chips {
+    flex-direction: column;
+    align-items: stretch;
+    min-height: auto;
+    padding-bottom: 0.6rem;
+}
+
+.field.has-chips input {
+    width: 100%;
+}
+
+.field.has-chips .chip-container {
+    margin-top: 0.45rem;
 }
 
 .btn.btn-primary {

@@ -33,13 +33,13 @@ type EditorTemplate = {
     id: string;
     name: string;
     spec: EditorCardSpecification;
+    variables: string[];
 };
 
 type EditorDocument = {
     version: 2;
     deckName: string;
     deckUuid: string;
-    variables: string[];
     templates: EditorTemplate[];
     activeTemplateId: string;
     rowTemplateIds: string[];
@@ -101,7 +101,8 @@ function createDefaultTemplate(name = "Layout 1"): EditorTemplate {
     return {
         id: crypto.randomUUID(),
         name,
-        spec
+        spec,
+        variables: []
     };
 }
 
@@ -111,7 +112,7 @@ function createDefaultDocument(): EditorDocument {
         version: 2,
         deckName: "New Deck",
         deckUuid: crypto.randomUUID(),
-        variables: [],
+        
         templates: [template],
         activeTemplateId: template.id,
         rowTemplateIds: [template.id],

@@ -3,13 +3,13 @@ import logicHtml from "./views/gamelogic/index.html";
 import cardDesignerHtml from "./views/designer/card/index.html";
 
 let server = Bun.serve({
-    port: 3000,
+    port: Number(process.env.PORT ?? "3001"),
     routes: {
         "/": landingHtml,
         "/logic": logicHtml,
         "/designer/card": cardDesignerHtml
     },
-    fetch(req) {
+    fetch(req: Request) {
         return new Response("Hello World");
     }
 });

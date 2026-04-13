@@ -1,17 +1,91 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BoardGame</title>
-    <link rel="stylesheet" href="../designer/card/css/index.css">
+    <title>BoardGame Toolkit</title>
+    <meta name="description"
+        content="Build board game ideas faster with a visual card designer, logic sandbox, and reusable toolkit.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;700;800&family=Sora:wght@500;700;800&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="./styles.css">
 </head>
+
 <body>
-    <h1>BoardGame</h1>
-    <h2>The ultimate open-source toolkit for board game development</h2>
-    <a href="/logic">Get Started</a> 
-    <a href="/designer/card">Get Started</a>
-    <button id="test">Show Modal</button>
+    <div class="page-bg" aria-hidden="true">
+        <span class="blob blob-a"></span>
+        <span class="blob blob-b"></span>
+        <span class="grid-mask"></span>
+    </div>
+
+    <header class="site-header">
+        <a class="brand" href="/" aria-label="BoardGame home">
+            <span class="brand-mark">BG</span>
+            <span class="brand-text">BoardGame Toolkit</span>
+        </a>
+        <button class="menu-toggle" id="menu-toggle" aria-expanded="false" aria-controls="main-nav"
+            aria-label="Toggle navigation">
+            Menu
+        </button>
+        <nav class="site-nav" id="main-nav" aria-label="Main">
+            <a href="#features">Features</a>
+            <a href="#workflow">Workflow</a>
+            <a href="#start">Get Started</a>
+        </nav>
+    </header>
+
+    <main>
+        <section class="hero section-reveal">
+            <p class="eyebrow">Open-source playground for board game creators</p>
+            <h1>Design cards. Prototype rules. Ship ideas faster.</h1>
+            <p class="hero-copy">
+                BoardGame Toolkit gives you practical tools for getting from rough concept to playable prototype,
+                without wrestling with repetitive setup.
+            </p>
+            <div class="hero-actions" id="start">
+                <a class="btn btn-primary" href="/designer/card">Open Card Designer</a>
+                <a class="btn btn-secondary" href="/logic">Try Logic Sandbox</a>
+            </div>
+            <ul class="hero-points" aria-label="Highlights">
+                <li>Template-based card layouts</li>
+                <li>Live Blockly-to-code preview</li>
+                <li>JSON import and export workflow</li>
+            </ul>
+        </section>
+
+        <section class="feature-grid section-reveal" id="features">
+            <article class="feature-card">
+                <h2>Visual Card Designer</h2>
+                <p>Lay out text, image zones, and style layers in millimeter precision with reusable templates.</p>
+            </article>
+            <article class="feature-card">
+                <h2>Logic Sandbox</h2>
+                <p>Use blocks to shape turn rules and generate code output instantly as your rules evolve.</p>
+            </article>
+            <article class="feature-card">
+                <h2>Reusable Structure</h2>
+                <p>Keep your board game systems modular using a typed core that is easy to extend.</p>
+            </article>
+        </section>
+
+        <section class="workflow section-reveal" id="workflow">
+            <h2>From idea to test build in three steps</h2>
+            <ol>
+                <li><strong>Shape components:</strong> create cards, templates, and deck data in the designer.</li>
+                <li><strong>Define behavior:</strong> model key game rules and effects in the logic sandbox.</li>
+                <li><strong>Iterate quickly:</strong> export and adjust your data until table tests feel right.</li>
+            </ol>
+        </section>
+    </main>
+
+    <footer class="site-footer">
+        <p><span id="current-year"></span> BoardGame Toolkit. Built for fast tabletop iteration.</p>
+    </footer>
+
     <script src="./entry.ts"></script>
 </body>
+
 </html>
