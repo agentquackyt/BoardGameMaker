@@ -14,7 +14,7 @@
     <header>
         <div class="header-info">
             <h2>Card Designer</h2>
-            <span class="header-deck" id="header-deck-name">New Deck</span>
+            <button type="button" class="header-deck" id="header-deck-name" title="Open page setup">New Deck</button>
             <span class="header-card-size" id="header-card-size">63.5 × 88.9 mm</span>
         </div>
         <div class="header-actions">
@@ -135,15 +135,15 @@
                         <span>Type</span>
                         <input type="text" id="element-type-input" readonly>
                     </label>
-                    <label class="field">
+                    <label class="field" id="element-text-field">
                         <span>Content</span>
                         <textarea id="element-content-input" rows="2" placeholder="Plain text or {variable}"></textarea>
                     </label>
-                    <label class="field">
+                    <label class="field" id="element-image-field">
                         <span>Image Media</span>
                         <select id="element-media-select"></select>
                     </label>
-                    <div class="inline-actions">
+                    <div class="inline-actions" id="element-image-actions">
                         <button class="btn btn-ghost" id="upload-element-media-btn">Upload Image</button>
                         <button class="btn btn-ghost" id="clear-element-media-btn">Clear</button>
                     </div>
@@ -170,7 +170,7 @@
                         <span>Centered</span>
                     </label>
                     <label class="field">
-                        <span>Text Color</span>
+                        <span>Font Color</span>
                         <input type="color" id="element-color-picker-input" value="#111111">
                         <input type="text" id="element-color-input" placeholder="#111111">
                     </label>
@@ -179,14 +179,83 @@
                         <input type="color" id="element-bg-color-picker-input" value="#ffffff">
                         <input type="text" id="element-bg-input" placeholder="transparent or linear-gradient(...)">
                     </label>
-                    <label class="field">
-                        <span>Background Media</span>
-                        <select id="element-bg-media-select"></select>
-                    </label>
-                    <div class="inline-actions">
-                        <button class="btn btn-ghost" id="upload-element-bg-btn">Upload BG</button>
-                        <button class="btn btn-ghost" id="clear-element-bg-media-btn">Clear</button>
+
+                    <div class="inline-actions wrap utility-preset-actions">
+                        <button class="btn btn-ghost" id="style-flex-center-btn">Flex Center</button>
+                        <button class="btn btn-ghost" id="style-flex-row-btn">Flex Row Center</button>
+                        <button class="btn btn-ghost" id="style-text-left-btn">Text Left</button>
+                        <button class="btn btn-ghost" id="style-text-center-btn">Text Center</button>
                     </div>
+
+                    <div class="grid-two utility-grid">
+                        <label class="field">
+                            <span>Font Family</span>
+                            <select id="style-font-family-input">
+                                <option value="">Default</option>
+                                <option value="'Manrope', sans-serif">Manrope</option>
+                                <option value="'Sora', sans-serif">Sora</option>
+                                <option value="'Georgia', serif">Georgia</option>
+                                <option value="'Courier New', monospace">Courier New</option>
+                            </select>
+                        </label>
+                        <label class="field">
+                            <span>Font Size</span>
+                            <input type="text" id="style-font-size-input" placeholder="5mm or 16px">
+                        </label>
+                        <label class="field">
+                            <span>Font Weight</span>
+                            <select id="style-font-weight-input">
+                                <option value="">Default</option>
+                                <option value="400">400 Regular</option>
+                                <option value="500">500 Medium</option>
+                                <option value="600">600 Semibold</option>
+                                <option value="700">700 Bold</option>
+                                <option value="800">800 Heavy</option>
+                            </select>
+                        </label>
+                        <label class="field">
+                            <span>Border Style</span>
+                            <select id="style-border-style-input">
+                                <option value="">None</option>
+                                <option value="solid">Solid</option>
+                                <option value="dashed">Dashed</option>
+                                <option value="dotted">Dotted</option>
+                            </select>
+                        </label>
+                        <label class="field">
+                            <span>Border Width</span>
+                            <input type="text" id="style-border-width-input" placeholder="1px">
+                        </label>
+                        <label class="field">
+                            <span>Border Color</span>
+                            <input type="color" id="style-border-color-picker-input" value="#111111">
+                            <input type="text" id="style-border-color-input" placeholder="#111111">
+                        </label>
+                        <label class="field">
+                            <span>Border Radius</span>
+                            <input type="text" id="style-border-radius-input" placeholder="4px">
+                        </label>
+                        <label class="field">
+                            <span>Padding</span>
+                            <input type="text" id="style-padding-input" placeholder="4px 8px">
+                        </label>
+                        <label class="field">
+                            <span>Margin</span>
+                            <input type="text" id="style-margin-input" placeholder="0 0 4px 0">
+                        </label>
+                    </div>
+
+                    <div class="inline-actions wrap utility-gradient-actions">
+                        <input type="color" id="style-gradient-start-input" value="#4f9f8f" aria-label="Gradient start color">
+                        <input type="color" id="style-gradient-end-input" value="#f4d8b0" aria-label="Gradient end color">
+                        <input type="number" id="style-gradient-angle-input" value="135" min="0" max="360" step="1" aria-label="Gradient angle">
+                        <button class="btn btn-ghost" id="style-apply-gradient-btn">Apply Gradient</button>
+                    </div>
+
+                    <div class="inline-actions wrap">
+                        <button class="btn btn-ghost" id="style-clear-utils-btn">Clear Utility Styles</button>
+                    </div>
+
                     <label class="field">
                         <span>Custom CSS (one per line)</span>
                         <textarea id="element-style-input" rows="3"></textarea>

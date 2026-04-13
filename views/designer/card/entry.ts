@@ -20,7 +20,7 @@ import {
 
 type ViewMode = "single" | "deck";
 type DragAction = "move" | "resize-nw" | "resize-ne" | "resize-sw" | "resize-se";
-type MediaTarget = "front-bg" | "element-image" | "element-bg" | null;
+type MediaTarget = "front-bg" | "element-image" | null;
 type HeaderMenuKind = "file" | "edit" | "view";
 
 type DeckRowInstance = {
@@ -114,14 +114,16 @@ function getDomRefs() {
         headerMenuItems: Array.from(document.querySelectorAll(".header-menu-item")) as HTMLButtonElement[],
         templateSelect: document.getElementById("template-select") as HTMLSelectElement,
         // card width/height moved to header modal; sidebar inputs removed
-            headerDeckName: document.getElementById("header-deck-name") as HTMLSpanElement,
+            headerDeckName: document.getElementById("header-deck-name") as HTMLButtonElement,
             headerCardSize: document.getElementById("header-card-size") as HTMLSpanElement,
         // front text inputs moved to header/modal; removed from sidebar
         elementTypeInput: document.getElementById("element-type-input") as HTMLInputElement,
         elementSelectionHint: document.getElementById("element-selection-hint") as HTMLParagraphElement,
+        elementTextField: document.getElementById("element-text-field") as HTMLLabelElement,
+        elementImageField: document.getElementById("element-image-field") as HTMLLabelElement,
+        elementImageActions: document.getElementById("element-image-actions") as HTMLDivElement,
         elementContentInput: document.getElementById("element-content-input") as HTMLTextAreaElement,
         elementMediaSelect: document.getElementById("element-media-select") as HTMLSelectElement,
-        elementBgMediaSelect: document.getElementById("element-bg-media-select") as HTMLSelectElement,
         elementXInput: document.getElementById("element-x-input") as HTMLInputElement,
         elementYInput: document.getElementById("element-y-input") as HTMLInputElement,
         elementWidthInput: document.getElementById("element-width-input") as HTMLInputElement,
@@ -131,6 +133,25 @@ function getDomRefs() {
         elementColorInput: document.getElementById("element-color-input") as HTMLInputElement,
         elementBgColorPickerInput: document.getElementById("element-bg-color-picker-input") as HTMLInputElement,
         elementBgInput: document.getElementById("element-bg-input") as HTMLInputElement,
+        styleFontFamilyInput: document.getElementById("style-font-family-input") as HTMLSelectElement,
+        styleFontSizeInput: document.getElementById("style-font-size-input") as HTMLInputElement,
+        styleFontWeightInput: document.getElementById("style-font-weight-input") as HTMLSelectElement,
+        styleBorderStyleInput: document.getElementById("style-border-style-input") as HTMLSelectElement,
+        styleBorderWidthInput: document.getElementById("style-border-width-input") as HTMLInputElement,
+        styleBorderColorPickerInput: document.getElementById("style-border-color-picker-input") as HTMLInputElement,
+        styleBorderColorInput: document.getElementById("style-border-color-input") as HTMLInputElement,
+        styleBorderRadiusInput: document.getElementById("style-border-radius-input") as HTMLInputElement,
+        stylePaddingInput: document.getElementById("style-padding-input") as HTMLInputElement,
+        styleMarginInput: document.getElementById("style-margin-input") as HTMLInputElement,
+        styleGradientStartInput: document.getElementById("style-gradient-start-input") as HTMLInputElement,
+        styleGradientEndInput: document.getElementById("style-gradient-end-input") as HTMLInputElement,
+        styleGradientAngleInput: document.getElementById("style-gradient-angle-input") as HTMLInputElement,
+        styleApplyGradientBtn: document.getElementById("style-apply-gradient-btn") as HTMLButtonElement,
+        styleFlexCenterBtn: document.getElementById("style-flex-center-btn") as HTMLButtonElement,
+        styleFlexRowBtn: document.getElementById("style-flex-row-btn") as HTMLButtonElement,
+        styleTextLeftBtn: document.getElementById("style-text-left-btn") as HTMLButtonElement,
+        styleTextCenterBtn: document.getElementById("style-text-center-btn") as HTMLButtonElement,
+        styleClearUtilsBtn: document.getElementById("style-clear-utils-btn") as HTMLButtonElement,
         elementStyleInput: document.getElementById("element-style-input") as HTMLTextAreaElement,
         snapEnabledInput: document.getElementById("snap-enabled-input") as HTMLInputElement,
         gridSizeInput: document.getElementById("grid-size-input") as HTMLInputElement,
@@ -164,8 +185,6 @@ function getDomRefs() {
         // upload/clear front bg buttons removed from sidebar
         uploadElementMediaBtn: document.getElementById("upload-element-media-btn") as HTMLButtonElement,
         clearElementMediaBtn: document.getElementById("clear-element-media-btn") as HTMLButtonElement,
-        uploadElementBgBtn: document.getElementById("upload-element-bg-btn") as HTMLButtonElement,
-        clearElementBgMediaBtn: document.getElementById("clear-element-bg-media-btn") as HTMLButtonElement,
         toastStack: document.getElementById("toast-stack") as HTMLDivElement,
         savedDecksModal: document.getElementById("saved-decks-modal") as HTMLDialogElement,
         savedDecksGrid: document.getElementById("saved-decks-grid") as HTMLDivElement,
@@ -191,7 +210,6 @@ function getDomRefs() {
         // header fields handled via headerCardSize/headerDeckName/headerBackColor
             [refs.elementContentInput, "id:element-content-input"],
         [refs.elementMediaSelect, "id:element-media-select"],
-        [refs.elementBgMediaSelect, "id:element-bg-media-select"],
         [refs.elementXInput, "id:element-x-input"],
         [refs.elementYInput, "id:element-y-input"],
         [refs.elementWidthInput, "id:element-width-input"],
@@ -235,6 +253,10 @@ function bindEvents() {
     });
 
     initHeaderMenus();
+
+    dom.headerDeckName.addEventListener("click", () => {
+        runHeaderMenuAction("file", "settings");
+    });
 
     dom.savedDecksCloseBtn.addEventListener("click", closeSavedDeckModal);
     dom.savedDecksModal.addEventListener("click", (event) => {
@@ -532,30 +554,106 @@ function bindEvents() {
         renderAll();
     });
 
-    dom.elementBgMediaSelect.addEventListener("change", () => {
-        applyElementMutation((element) => {
-            ensureElementStyle(element).backgroundMediaId = dom?.elementBgMediaSelect.value || undefined;
-        });
-    });
-
-    dom.uploadElementBgBtn.addEventListener("click", () => {
-        if (!getSelectedElement()) {
-            setStatus("Select an element first");
-            return;
-        }
-        state.pendingUploadTarget = "element-bg";
-        dom?.mediaUploadInput.click();
-    });
-
-    dom.clearElementBgMediaBtn.addEventListener("click", () => {
-        applyElementMutation((element) => {
-            ensureElementStyle(element).backgroundMediaId = undefined;
-        });
-    });
-
     dom.elementStyleInput.addEventListener("change", () => {
         applyElementMutation((element) => {
             ensureElementStyle(element).additionalStyles = parseStyleText(dom?.elementStyleInput.value ?? "");
+        });
+    });
+
+    const bindUtilityTextInput = (input: HTMLInputElement, cssKey: string) => {
+        input.addEventListener("change", () => {
+            applyElementMutation((element) => {
+                setElementAdditionalStyle(element, cssKey, input.value.trim());
+            });
+        });
+    };
+
+    const bindUtilitySelectInput = (input: HTMLSelectElement, cssKey: string) => {
+        input.addEventListener("change", () => {
+            applyElementMutation((element) => {
+                setElementAdditionalStyle(element, cssKey, input.value.trim());
+            });
+        });
+    };
+
+    bindUtilitySelectInput(dom.styleFontFamilyInput, "font-family");
+    bindUtilityTextInput(dom.styleFontSizeInput, "font-size");
+    bindUtilitySelectInput(dom.styleFontWeightInput, "font-weight");
+    bindUtilitySelectInput(dom.styleBorderStyleInput, "border-style");
+    bindUtilityTextInput(dom.styleBorderWidthInput, "border-width");
+    bindUtilityTextInput(dom.styleBorderRadiusInput, "border-radius");
+    bindUtilityTextInput(dom.stylePaddingInput, "padding");
+    bindUtilityTextInput(dom.styleMarginInput, "margin");
+
+    dom.styleBorderColorPickerInput.addEventListener("input", () => {
+        const value = dom?.styleBorderColorPickerInput.value || "#111111";
+        if (dom) {
+            dom.styleBorderColorInput.value = value;
+        }
+        applyElementMutation((element) => {
+            setElementAdditionalStyle(element, "border-color", value);
+        }, false);
+        renderAll();
+    });
+
+    dom.styleBorderColorInput.addEventListener("input", () => {
+        const value = dom?.styleBorderColorInput.value.trim() || "#111111";
+        applyElementMutation((element) => {
+            setElementAdditionalStyle(element, "border-color", value);
+        }, false);
+        syncColorInput(dom?.styleBorderColorPickerInput, value, "#111111");
+        renderAll();
+    });
+
+    dom.styleApplyGradientBtn.addEventListener("click", () => {
+        const start = dom?.styleGradientStartInput.value || "#4f9f8f";
+        const end = dom?.styleGradientEndInput.value || "#f4d8b0";
+        const angle = clampNumber(Number(dom?.styleGradientAngleInput.value), 0, 360);
+        const gradient = `linear-gradient(${angle}deg, ${start}, ${end})`;
+        if (dom) {
+            dom.elementBgInput.value = gradient;
+            syncColorInput(dom.elementBgColorPickerInput, gradient, "#ffffff");
+        }
+        applyElementMutation((element) => {
+            ensureElementStyle(element).background = gradient;
+        });
+    });
+
+    dom.styleFlexCenterBtn.addEventListener("click", () => {
+        applyElementMutation((element) => {
+            setElementAdditionalStyle(element, "display", "flex");
+            setElementAdditionalStyle(element, "align-items", "center");
+            setElementAdditionalStyle(element, "justify-content", "center");
+            setElementAdditionalStyle(element, "text-align", "center");
+        });
+    });
+
+    dom.styleFlexRowBtn.addEventListener("click", () => {
+        applyElementMutation((element) => {
+            setElementAdditionalStyle(element, "display", "flex");
+            setElementAdditionalStyle(element, "flex-direction", "row");
+            setElementAdditionalStyle(element, "align-items", "center");
+            setElementAdditionalStyle(element, "justify-content", "center");
+            setElementAdditionalStyle(element, "gap", "4px");
+        });
+    });
+
+    dom.styleTextLeftBtn.addEventListener("click", () => {
+        applyElementMutation((element) => {
+            setElementAdditionalStyle(element, "text-align", "left");
+        });
+    });
+
+    dom.styleTextCenterBtn.addEventListener("click", () => {
+        applyElementMutation((element) => {
+            setElementAdditionalStyle(element, "text-align", "center");
+        });
+    });
+
+    dom.styleClearUtilsBtn.addEventListener("click", () => {
+        applyElementMutation((element) => {
+            const style = ensureElementStyle(element);
+            style.additionalStyles = {};
         });
     });
 
@@ -1564,11 +1662,6 @@ async function handleMediaUpload(event: Event) {
                 element.type = "image";
                 element.contentMediaId = mediaId;
             }
-        } else if (state.pendingUploadTarget === "element-bg") {
-            const element = getSelectedElement();
-            if (element) {
-                ensureElementStyle(element).backgroundMediaId = mediaId;
-            }
         }
     });
 
@@ -1970,10 +2063,8 @@ function renderMediaSelects() {
     }
 
     const mediaItems = Object.values(state.doc.mediaLibrary);
-    const activeTemplate = getActiveTemplate();
     const element = getSelectedElement();
     renderMediaSelect(dom.elementMediaSelect, mediaItems, "No image media", element?.contentMediaId);
-    renderMediaSelect(dom.elementBgMediaSelect, mediaItems, "No background media", element?.style?.backgroundMediaId);
 }
 
 function renderMediaSelect(select: HTMLSelectElement, mediaItems: MediaAsset[], emptyLabel: string, selectedId?: string) {
@@ -2012,6 +2103,15 @@ function renderPropertiesPanel() {
         dom.elementCenteredInput.checked = false;
         dom.elementColorInput.value = "";
         dom.elementBgInput.value = "";
+        dom.styleFontFamilyInput.value = "";
+        dom.styleFontSizeInput.value = "";
+        dom.styleFontWeightInput.value = "";
+        dom.styleBorderStyleInput.value = "";
+        dom.styleBorderWidthInput.value = "";
+        dom.styleBorderColorInput.value = "";
+        dom.styleBorderRadiusInput.value = "";
+        dom.stylePaddingInput.value = "";
+        dom.styleMarginInput.value = "";
         dom.elementStyleInput.value = "";
         dom.elementSelectionHint.textContent = "No element selected. Click an overlay in the card canvas to edit, or add a new element first.";
         document.querySelector('.no-selection')!.classList.add('hidden');
@@ -2022,6 +2122,12 @@ function renderPropertiesPanel() {
 
     dom.elementSelectionHint.textContent = "Tip: select an overlay on the card to edit it. Copy with Cmd/Ctrl+C and paste with Cmd/Ctrl+V.";
     document.querySelector('.no-selection')!.classList.remove('hidden');
+
+    const isImageElement = element.type === "image";
+    dom.elementTextField.style.display = isImageElement ? "none" : "flex";
+    dom.elementImageField.style.display = isImageElement ? "flex" : "none";
+    dom.elementImageActions.style.display = isImageElement ? "flex" : "none";
+
     dom.elementTypeInput.value = element.type;
     dom.elementContentInput.value = element.content;
     dom.elementXInput.value = String(roundTo(element.posX, 2));
@@ -2031,8 +2137,19 @@ function renderPropertiesPanel() {
     dom.elementCenteredInput.checked = Boolean(element.centered);
     dom.elementColorInput.value = element.style?.textColor ?? "#111111";
     dom.elementBgInput.value = element.style?.background ?? "transparent";
+    const styles = element.style?.additionalStyles ?? {};
+    dom.styleFontFamilyInput.value = styles["font-family"] ?? "";
+    dom.styleFontSizeInput.value = styles["font-size"] ?? "";
+    dom.styleFontWeightInput.value = styles["font-weight"] ?? "";
+    dom.styleBorderStyleInput.value = styles["border-style"] ?? "";
+    dom.styleBorderWidthInput.value = styles["border-width"] ?? "";
+    dom.styleBorderColorInput.value = styles["border-color"] ?? "";
+    dom.styleBorderRadiusInput.value = styles["border-radius"] ?? "";
+    dom.stylePaddingInput.value = styles["padding"] ?? "";
+    dom.styleMarginInput.value = styles["margin"] ?? "";
     syncColorInput(dom.elementColorPickerInput, dom.elementColorInput.value, "#111111");
     syncColorInput(dom.elementBgColorPickerInput, dom.elementBgInput.value, "#ffffff");
+    syncColorInput(dom.styleBorderColorPickerInput, dom.styleBorderColorInput.value || "#111111", "#111111");
     dom.elementStyleInput.value = stringifyStyles(element.style?.additionalStyles ?? {});
 }
 
@@ -2420,6 +2537,16 @@ function stringifyStyles(styles: Record<string, string>): string {
     return Object.entries(styles)
         .map(([key, value]) => `${key}: ${value}`)
         .join("\n");
+}
+
+function setElementAdditionalStyle(element: EditorLayoutElement, key: string, value: string) {
+    const style = ensureElementStyle(element);
+    const next = value.trim();
+    if (!next) {
+        delete style.additionalStyles?.[key];
+        return;
+    }
+    style.additionalStyles![key] = next;
 }
 
 function sanitizeCoordinate(value: number): number {
