@@ -936,6 +936,11 @@ function bindEvents() {
 
         if (event.ctrlKey || event.metaKey) {
             const key = event.key.toLowerCase();
+            if (key === "s") {
+                event.preventDefault();
+                saveDeck();
+                return;
+            }
             if (key === "z" && event.shiftKey) {
                 event.preventDefault();
                 redo();
