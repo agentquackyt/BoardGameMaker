@@ -495,13 +495,6 @@ header h2 {
     font-weight: 700;
 }
 
-.style-gradient-preview {
-    grid-column: 1 / -1;
-    min-height: 1.35rem;
-    border-radius: 999px;
-    border: 1px solid color-mix(in srgb, var(--md-sys-color-outline) 36%, transparent);
-    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.22), 0 4px 10px rgba(0, 0, 0, 0.08);
-}
 
 .designer-context-menu {
     position: fixed;
@@ -645,16 +638,16 @@ header h2 {
 
 /* error button */
 .btn.btn-error {
-    background: rgba(156, 20, 31, 0.94);
-    color: rgba(234, 196, 200, 0.94);
+    color: rgba(113, 11, 20, 0.94);
+    background: rgba(225, 142, 150, 0.94);
 }
 
 .btn.btn-error:hover {
-    background: rgba(140, 18, 28, 0.98);
+    background: rgb(216, 91, 102);
 }
 
 .btn.btn-error:active {
-    background: rgba(140, 18, 28, 1);
+    background: rgba(225, 72, 85, 0.94);
 }
 
 
@@ -962,11 +955,31 @@ header h2 {
 }
 
 .saved-decks-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 0.9rem;
+    overflow-y: auto;
+    padding-right: 0.2rem;
+}
+
+.saved-decks-section {
+    display: flex;
+    flex-direction: column;
+    gap: 0.55rem;
+}
+
+.saved-decks-section-title {
+    font-size: 0.82rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-secondary);
+    margin: 0;
+}
+
+.saved-decks-section-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(13.5rem, 1fr));
     gap: 0.65rem;
-    overflow-y: auto;
-    padding-right: 0.2rem;
 }
 
 .saved-deck-card {
@@ -979,15 +992,7 @@ header h2 {
     flex-direction: column;
     gap: 0.3rem;
     text-align: left;
-    cursor: pointer;
-    transition: 250ms ease;
-}
-
-.saved-deck-card:hover,
-.saved-deck-card:focus-visible {
-    background: var(--md-sys-color-tertiary);
-    color: var(--md-sys-color-on-tertiary);
-    outline: none;
+    cursor: default;
 }
 
 .saved-deck-card-name {
@@ -997,6 +1002,18 @@ header h2 {
 
 .saved-deck-card-id {
     font-size: 0.75rem;
+}
+
+.saved-deck-card-actions {
+    display: flex;
+    gap: 0.45rem;
+    margin-top: 0.35rem;
+}
+
+.saved-deck-open-btn,
+.saved-deck-delete-btn {
+    flex: 1;
+    justify-content: center;
 }
 
 .saved-decks-empty {

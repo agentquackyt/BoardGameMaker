@@ -80,7 +80,9 @@ type FocusSnapshot = {
 
 const CARD_DECK_PREFIX = "boardgame.card-deck";
 const DESIGNER_PREFIX = "boardgame.card-designer";
+const DESIGNER_DRAFT_KEY = `${DESIGNER_PREFIX}:draft`;
 const HISTORY_LIMIT = 100;
+const AUTOSAVE_DELAY_MS = 600;
 
 function clone<T>(value: T): T {
     return JSON.parse(JSON.stringify(value)) as T;
@@ -106,10 +108,12 @@ let dom: ReturnType<typeof getDomRefs> | null = null;
 let savedDecksModalTrigger: HTMLElement | null = null;
 let activeHeaderMenu: HeaderMenuKind | null = null;
 let headerMenuCloseTimer: number | null = null;
+let autosaveTimer: number | null = null;
 
 document.addEventListener("DOMContentLoaded", () => {
     dom = getDomRefs();
     bindEvents();
+    restoreTemporaryDesignerDocument();
     renderAll();
 });
 
@@ -153,7 +157,6 @@ function getDomRefs() {
         styleGradientStartInput: document.getElementById("style-gradient-start-input") as HTMLInputElement,
         styleGradientEndInput: document.getElementById("style-gradient-end-input") as HTMLInputElement,
         styleGradientAngleInput: document.getElementById("style-gradient-angle-input") as HTMLInputElement,
-        styleGradientPreview: document.getElementById("style-gradient-preview") as HTMLDivElement,
         styleApplyGradientBtn: document.getElementById("style-apply-gradient-btn") as HTMLButtonElement,
         styleFlexCenterBtn: document.getElementById("style-flex-center-btn") as HTMLButtonElement,
         styleFlexRowBtn: document.getElementById("style-flex-row-btn") as HTMLButtonElement,
@@ -758,7 +761,7 @@ function bindEvents() {
         });
         const result = await openNewCardModal(templates, variableMap);
         if (!result) {
-            setStatus("Row creation canceled", "muted");
+            setStatus("Card creation canceled", "muted");
             return;
         }
 
@@ -904,7 +907,7 @@ function bindEvents() {
 
     dom.removeRowBtn.addEventListener("click", () => {
         if (state.doc.sampleRows.length <= 1) {
-            setStatus("At least one row is required");
+            setStatus("At least one card is required");
             return;
         }
 
@@ -991,6 +994,7 @@ function bindEvents() {
     });
 
     window.addEventListener("beforeunload", (event) => {
+        flushAutosave();
         if (!state.dirty) {
             return;
         }
@@ -1010,6 +1014,7 @@ function createNewDeck() {
     state.historyPast = [];
     state.historyFuture = [];
     state.dirty = false;
+    saveTemporaryDesignerDocument();
     setStatus("Created new deck");
     renderAll();
 }
@@ -1402,17 +1407,7 @@ function isTypingTarget(target: EventTarget | null): boolean {
     return tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT";
 }
 
-function updateGradientPreview() {
-    if (!dom?.styleGradientPreview) {
-        return;
-    }
-
-    const start = dom.styleGradientStartInput.value || "#4f9f8f";
-    const end = dom.styleGradientEndInput.value || "#f4d8b0";
-    const rawAngle = Number(dom.styleGradientAngleInput.value);
-    const angle = Number.isFinite(rawAngle) ? clampNumber(rawAngle, 0, 360) : 135;
-    dom.styleGradientPreview.style.background = `linear-gradient(${angle}deg, ${start}, ${end})`;
-}
+function updateGradientPreview() {}
 
 function parseSimpleLinearGradient(value: string): { angle: number; start: string; end: string } | null {
     const match = value.trim().match(/^linear-gradient\(\s*(-?\d+(?:\.\d+)?)deg\s*,\s*(#[0-9a-f]{3,8}|rgba?\([^)]*\)|[a-z]+)\s*,\s*(#[0-9a-f]{3,8}|rgba?\([^)]*\)|[a-z]+)\s*\)$/i);
@@ -1832,6 +1827,7 @@ function applyMutation(mutator: () => void, useHistory = true) {
         if (useHistory) {
             pushHistory(before);
         }
+        scheduleAutosave();
     }
 
     renderAll();
@@ -1858,6 +1854,7 @@ function undo() {
     state.selectedElementIndex = clampNumber(state.selectedElementIndex ?? 0, 0, Math.max(0, getActiveTemplate().spec.layout.length - 1));
     state.selectedRowIndex = clampNumber(state.selectedRowIndex, 0, Math.max(0, state.doc.sampleRows.length - 1));
     state.dirty = true;
+    scheduleAutosave();
     setStatus("Undo");
     renderAll();
 }
@@ -1875,6 +1872,7 @@ function redo() {
     state.selectedElementIndex = clampNumber(state.selectedElementIndex ?? 0, 0, Math.max(0, getActiveTemplate().spec.layout.length - 1));
     state.selectedRowIndex = clampNumber(state.selectedRowIndex, 0, Math.max(0, state.doc.sampleRows.length - 1));
     state.dirty = true;
+    scheduleAutosave();
     setStatus("Redo");
     renderAll();
 }
@@ -1966,6 +1964,64 @@ function getOrCreateMediaAsset(file: File, dataUrl: string): string {
     return asset.id;
 }
 
+function saveTemporaryDesignerDocument() {
+    if (typeof localStorage === "undefined") {
+        return;
+    }
+    localStorage.setItem(DESIGNER_DRAFT_KEY, JSON.stringify(state.doc));
+}
+
+function flushAutosave() {
+    if (autosaveTimer !== null) {
+        window.clearTimeout(autosaveTimer);
+        autosaveTimer = null;
+    }
+    saveTemporaryDesignerDocument();
+}
+
+function scheduleAutosave() {
+    if (autosaveTimer !== null) {
+        window.clearTimeout(autosaveTimer);
+    }
+    autosaveTimer = window.setTimeout(() => {
+        autosaveTimer = null;
+        saveTemporaryDesignerDocument();
+    }, AUTOSAVE_DELAY_MS);
+}
+
+function restoreTemporaryDesignerDocument() {
+    if (typeof localStorage === "undefined") {
+        return;
+    }
+
+    const raw = localStorage.getItem(DESIGNER_DRAFT_KEY);
+    if (!raw) {
+        return;
+    }
+
+    try {
+        const parsed = JSON.parse(raw);
+        state.doc = parseImportedDocument(parsed);
+        state.selectedElementIndex = getActiveTemplate().spec.layout.length > 0 ? 0 : null;
+        state.selectedRowIndex = 0;
+        state.historyPast = [];
+        state.historyFuture = [];
+        state.dirty = true;
+        setStatus("Restored autosave draft", "muted");
+    } catch {
+        localStorage.removeItem(DESIGNER_DRAFT_KEY);
+    }
+}
+
+function deleteSavedDeck(uuid: string) {
+    if (typeof localStorage === "undefined") {
+        return;
+    }
+
+    localStorage.removeItem(`${DESIGNER_PREFIX}:${uuid}`);
+    localStorage.removeItem(`${CARD_DECK_PREFIX}:${uuid}`);
+}
+
 function saveDeck() {
     saveDesignerDocument();
 
@@ -1976,6 +2032,7 @@ function saveDeck() {
     cardDeck.toLocalStorage();
 
     state.dirty = false;
+    saveTemporaryDesignerDocument();
     setStatus("Saved designer document and generated card deck");
     if (dom?.savedDecksModal.open) {
         renderSavedDeckCards();
@@ -2006,6 +2063,7 @@ function loadDesignerDocument(uuid: string) {
         state.historyPast = [];
         state.historyFuture = [];
         state.dirty = false;
+        saveTemporaryDesignerDocument();
         setStatus("Designer deck loaded");
         renderAll();
     } catch (error) {
@@ -2078,6 +2136,7 @@ function importDeckFromFile(event: Event) {
             state.historyPast = [];
             state.historyFuture = [];
             state.dirty = true;
+            saveTemporaryDesignerDocument();
             setStatus("JSON imported");
             renderAll();
         } catch (error) {
@@ -2241,23 +2300,41 @@ function renderSavedDeckCards() {
     if (!dom) {
         return;
     }
+    const ui = dom;
 
     const items = getSavedDesignerDecks();
-    dom.savedDecksGrid.replaceChildren();
+    const draftItems = items.filter((item) => item.uuid === "draft");
+    const savedItems = items.filter((item) => item.uuid !== "draft");
+    ui.savedDecksGrid.replaceChildren();
 
-    if (items.length === 0) {
+    if (draftItems.length === 0 && savedItems.length === 0) {
         const empty = document.createElement("p");
         empty.className = "saved-decks-empty";
         empty.textContent = "No saved decks yet. Save the current deck to make it appear here.";
-        dom.savedDecksGrid.appendChild(empty);
+        ui.savedDecksGrid.appendChild(empty);
         return;
     }
 
-    for (const item of items) {
-        const card = document.createElement("button");
-        card.type = "button";
+    const renderDeckSection = (title: string, entries: Array<{ uuid: string; name: string }>) => {
+        if (entries.length === 0) {
+            return;
+        }
+
+        const section = document.createElement("section");
+        section.className = "saved-decks-section";
+
+        const heading = document.createElement("h4");
+        heading.className = "saved-decks-section-title";
+        heading.textContent = title;
+        section.appendChild(heading);
+
+        const sectionGrid = document.createElement("div");
+        sectionGrid.className = "saved-decks-section-grid";
+
+        for (const item of entries) {
+        const card = document.createElement("div");
         card.className = "saved-deck-card";
-        card.title = `Open ${item.name}`;
+        card.title = item.name;
 
         const name = document.createElement("span");
         name.className = "saved-deck-card-name";
@@ -2265,18 +2342,50 @@ function renderSavedDeckCards() {
 
         const id = document.createElement("span");
         id.className = "saved-deck-card-id";
-        id.textContent = `UUID ${item.uuid.slice(0, 8)}...`;
+        id.textContent = item.uuid === "draft" ? "Temporary draft" : `UUID ${item.uuid.slice(0, 8)}...`;
+
+        const actions = document.createElement("div");
+        actions.className = "saved-deck-card-actions";
+
+        const openButton = document.createElement("button");
+        openButton.type = "button";
+        openButton.className = "btn btn-primary saved-deck-open-btn";
+        openButton.textContent = "Open";
+
+        const deleteButton = document.createElement("button");
+        deleteButton.type = "button";
+        deleteButton.className = "btn btn-error saved-deck-delete-btn";
+        deleteButton.textContent = "Delete";
 
         card.appendChild(name);
         card.appendChild(id);
+        actions.appendChild(openButton);
+        actions.appendChild(deleteButton);
+        card.appendChild(actions);
 
-        card.addEventListener("click", () => {
+        openButton.addEventListener("click", () => {
             loadDesignerDocument(item.uuid);
             closeSavedDeckModal();
         });
 
-        dom.savedDecksGrid.appendChild(card);
-    }
+        deleteButton.addEventListener("click", () => {
+            deleteSavedDeck(item.uuid);
+            if (state.doc.deckUuid === item.uuid) {
+                createNewDeck();
+            }
+            setStatus(`Deleted deck ${item.name}`);
+            renderSavedDeckCards();
+        });
+
+        sectionGrid.appendChild(card);
+        }
+
+        section.appendChild(sectionGrid);
+        ui.savedDecksGrid.appendChild(section);
+    };
+
+    renderDeckSection("Drafts", draftItems);
+    renderDeckSection("Saved Decks", savedItems);
 }
 
 function renderTemplateSelect() {
@@ -2519,7 +2628,6 @@ function renderDataTable() {
         delBtn.textContent = 'Delete';
         delBtn.addEventListener('click', (e) => {
             e.stopPropagation();
-            if (!confirm('Delete this card?')) return;
             applyMutation(() => {
                 state.doc.sampleRows.splice(rowIndex, 1);
                 state.doc.rowTemplateIds.splice(rowIndex, 1);
@@ -2658,7 +2766,7 @@ function renderDeckPreview() {
         const spec = toCardSpecification(instance.template, instance.cardIndex);
         const rendered = new Card(spec, instance.row).getRender();
         rendered.style.cursor = "pointer";
-        rendered.title = `Card ${instance.cardIndex + 1} (Row ${instance.rowIndex + 1}, Copy ${instance.copyIndex + 1})`;
+        rendered.title = `Card ${instance.cardIndex + 1} (Card ${instance.rowIndex + 1}, Copy ${instance.copyIndex + 1})`;
 
         if (instance.rowIndex === state.selectedRowIndex) {
             rendered.style.outline = "0.6mm solid #4d80ff";
@@ -2761,6 +2869,7 @@ function onDragMove(event: MouseEvent) {
     targetElement.height = clampNumber(nextHeight, 1, activeTemplate.spec.height * 2);
 
     state.dirty = true;
+    scheduleAutosave();
     renderCanvas();
     renderToolbarState();
 }
@@ -2791,7 +2900,7 @@ function openSavedDeckModal(trigger: HTMLElement | null) {
     renderSavedDeckCards();
     dom.savedDecksModal.showModal();
 
-    const firstCard = dom.savedDecksGrid.querySelector(".saved-deck-card") as HTMLButtonElement | null;
+    const firstCard = dom.savedDecksGrid.querySelector(".saved-deck-open-btn") as HTMLButtonElement | null;
     if (firstCard) {
         firstCard.focus();
         return;
