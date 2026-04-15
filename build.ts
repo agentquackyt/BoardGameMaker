@@ -8,5 +8,4 @@ Bun.build({
     outdir: "docs",
     minify: true,
     sourcemap: false,
-    publicPath: "/",
 })
