@@ -5,7 +5,14 @@ import {
     type CardStyleInterface
 } from "../../../system/boardgame/cards/Card";
 import { CardDeck } from "../../../system/boardgame/cards/CardDeck";
-import { openSettingsModal, openNewCardModal } from "./ts/CardDeckSetup";
+import {
+    openSettingsModal,
+    openNewCardModal,
+    openCardToolModal,
+    getCardVariableFieldLabel,
+    getCardToolIncrementalVariableLabel,
+    getCardToolStaticValueLabel
+} from "./ts/CardDeckSetup";
 import Modal from "../../../system/types/ModalManager";
 import { 
     type EditorTemplate, 
@@ -146,6 +153,7 @@ function getDomRefs() {
         styleGradientStartInput: document.getElementById("style-gradient-start-input") as HTMLInputElement,
         styleGradientEndInput: document.getElementById("style-gradient-end-input") as HTMLInputElement,
         styleGradientAngleInput: document.getElementById("style-gradient-angle-input") as HTMLInputElement,
+        styleGradientPreview: document.getElementById("style-gradient-preview") as HTMLDivElement,
         styleApplyGradientBtn: document.getElementById("style-apply-gradient-btn") as HTMLButtonElement,
         styleFlexCenterBtn: document.getElementById("style-flex-center-btn") as HTMLButtonElement,
         styleFlexRowBtn: document.getElementById("style-flex-row-btn") as HTMLButtonElement,
@@ -181,6 +189,7 @@ function getDomRefs() {
         addVariableBtn: document.getElementById("add-variable-btn") as HTMLButtonElement,
         deleteVariableBtn: document.getElementById("delete-variable-btn") as HTMLButtonElement,
         addRowBtn: document.getElementById("add-row-btn") as HTMLButtonElement,
+        cardToolBtn: document.getElementById("card-tool-btn") as HTMLButtonElement,
         removeRowBtn: document.getElementById("remove-row-btn") as HTMLButtonElement,
         // upload/clear front bg buttons removed from sidebar
         uploadElementMediaBtn: document.getElementById("upload-element-media-btn") as HTMLButtonElement,
@@ -199,7 +208,9 @@ function getDomRefs() {
         dialogSelectLabel: document.getElementById("dialog-select-label") as HTMLSpanElement,
         dialogSelectInput: document.getElementById("dialog-select-input") as HTMLSelectElement,
         dialogCancelBtn: document.getElementById("dialog-cancel-btn") as HTMLButtonElement,
-        dialogConfirmBtn: document.getElementById("dialog-confirm-btn") as HTMLButtonElement
+        dialogConfirmBtn: document.getElementById("dialog-confirm-btn") as HTMLButtonElement,
+        contextMenu: document.getElementById("designer-context-menu") as HTMLDivElement,
+        contextMenuItems: Array.from(document.querySelectorAll(".designer-context-menu-item")) as HTMLButtonElement[]
     };
 
     const focusMap: Array<[HTMLElement, string]> = [
@@ -284,14 +295,14 @@ function bindEvents() {
 
     dom.addTemplateBtn.addEventListener("click", async () => {
         const templateCount = state.doc.templates.length + 1;
-        const modal = new Modal('New Sublayout', 'Create a new sublayout')
-            .addTextField('Sublayout Name', `Layout ${templateCount}`, true)
+        const modal = new Modal('New Template', 'Create a new template')
+            .addTextField('Template Name', `Template ${templateCount}`, true)
             .addChipField('Variables', []);
 
         const result = await modal.show();
         if (!result) return;
 
-        const name = String(result['Sublayout Name'] || `Layout ${templateCount}`).trim();
+        const name = String(result['Template Name'] || `Template ${templateCount}`).trim();
         const vars = Array.isArray(result['Variables']) ? result['Variables'].map(String) : [];
 
         applyMutation(() => {
@@ -322,8 +333,8 @@ function bindEvents() {
 
     dom.renameTemplateBtn.addEventListener("click", async () => {
         const current = getActiveTemplate();
-        const modal = new Modal('Edit Sublayout', 'Edit sublayout name and variables')
-            .addTextField('Sublayout Name', current.name, true)
+        const modal = new Modal('Edit Template', 'Edit template name and variables')
+            .addTextField('Template Name', current.name, true)
             .addChipField('Variables', current.variables ?? []);
 
         const result = await modal.show();
@@ -332,7 +343,7 @@ function bindEvents() {
         }
 
         applyMutation(() => {
-            const newName = String(result['Sublayout Name'] || current.name).trim();
+            const newName = String(result['Template Name'] || current.name).trim();
             current.name = newName || current.name;
             const vars = Array.isArray(result['Variables']) ? result['Variables'].map(String) : [];
             current.variables = vars;
@@ -349,17 +360,17 @@ function bindEvents() {
                 }
             }
         });
-        setStatus("Sublayout updated");
+        setStatus("Template updated");
     });
 
     dom.deleteTemplateBtn.addEventListener("click", () => {
         if (state.doc.templates.length <= 1) {
-            setStatus("At least one sublayout is required");
+            setStatus("At least one template is required");
             return;
         }
 
         const template = getActiveTemplate();
-        if (!confirm(`Delete sublayout '${template.name}'?`)) {
+        if (!confirm(`Delete template '${template.name}'?`)) {
             return;
         }
 
@@ -605,6 +616,10 @@ function bindEvents() {
         renderAll();
     });
 
+    dom.styleGradientStartInput.addEventListener("input", updateGradientPreview);
+    dom.styleGradientEndInput.addEventListener("input", updateGradientPreview);
+    dom.styleGradientAngleInput.addEventListener("input", updateGradientPreview);
+
     dom.styleApplyGradientBtn.addEventListener("click", () => {
         const start = dom?.styleGradientStartInput.value || "#4f9f8f";
         const end = dom?.styleGradientEndInput.value || "#f4d8b0";
@@ -617,6 +632,7 @@ function bindEvents() {
         applyElementMutation((element) => {
             ensureElementStyle(element).background = gradient;
         });
+        updateGradientPreview();
     });
 
     dom.styleFlexCenterBtn.addEventListener("click", () => {
@@ -731,11 +747,14 @@ function bindEvents() {
     }
 
     dom.addRowBtn.addEventListener("click", async () => {
-        // Use modal to collect template (display name only), amount and variable values
-        const templates = state.doc.templates.map((t) => t.name);
+        // Use modal to collect template (display name), amount and variable values.
+        const templates = state.doc.templates.map((t, index) => `${t.name} (#${index + 1})`);
+        const templateOptionToId: Record<string, string> = {};
         const variableMap: Record<string, string[]> = {};
-        state.doc.templates.forEach((t) => {
-            variableMap[t.name] = t.variables ?? [];
+        state.doc.templates.forEach((t, index) => {
+            const option = templates[index] || `${t.name} (#${index + 1})`;
+            templateOptionToId[option] = t.id;
+            variableMap[option] = t.variables ?? [];
         });
         const result = await openNewCardModal(templates, variableMap);
         if (!result) {
@@ -744,19 +763,8 @@ function bindEvents() {
         }
 
         const rawType = result["Card Type"] ?? "";
-        let templateId: string | null = null;
-        // First try to resolve by displayed name
-        const selectedName = String(rawType);
-        const foundByName = state.doc.templates.find((t) => t.name === selectedName);
-        if (foundByName) {
-            templateId = foundByName.id;
-        } else {
-            // Fallback: maybe the modal returned an id (older behavior)
-            const foundById = state.doc.templates.find((t) => t.id === selectedName);
-            if (foundById) {
-                templateId = foundById.id;
-            }
-        }
+        const selectedOption = String(rawType);
+        const templateId = templateOptionToId[selectedOption] ?? null;
         if (!templateId) {
             setStatus("Invalid template selected", "error");
             return;
@@ -768,8 +776,9 @@ function bindEvents() {
         applyMutation(() => {
             const row: Record<string, string> = {};
             const tmpl = getTemplateById(templateId!);
+            const templateOption = selectedOption;
             for (const variable of tmpl.variables) {
-                const key = `Variable: ${variable}`;
+                const key = getCardVariableFieldLabel(templateOption, variable);
                 const value = result[key] !== undefined ? String(result[key]) : "";
                 row[variable] = value;
             }
@@ -778,6 +787,119 @@ function bindEvents() {
             state.doc.rowAmounts.push(amount);
             state.selectedRowIndex = state.doc.sampleRows.length - 1;
         });
+    });
+
+    dom.cardToolBtn.addEventListener("click", async () => {
+        const templates = state.doc.templates.map((t, index) => `${t.name} (#${index + 1})`);
+        const templateOptionToId: Record<string, string> = {};
+        const variableMap: Record<string, string[]> = {};
+
+        state.doc.templates.forEach((t, index) => {
+            const option = templates[index] || `${t.name} (#${index + 1})`;
+            templateOptionToId[option] = t.id;
+            variableMap[option] = t.variables ?? [];
+        });
+
+        const result = await openCardToolModal(templates, variableMap);
+        if (!result) {
+            setStatus("Card tool canceled", "muted");
+            return;
+        }
+
+        const selectedOption = String(result["Card Type"] ?? "");
+        const templateId = templateOptionToId[selectedOption] ?? "";
+        if (!templateId) {
+            setStatus("Invalid template selected", "error");
+            return;
+        }
+
+        const template = getTemplateById(templateId);
+
+        const staticValues: Record<string, string> = {};
+        for (const variable of template.variables) {
+            const staticLabel = getCardToolStaticValueLabel(selectedOption, variable);
+            staticValues[variable] = String(result[staticLabel] ?? "");
+        }
+
+        const differentLabel = getCardToolIncrementalVariableLabel(selectedOption);
+        const differentParameter = String(result[differentLabel] ?? "None").trim();
+
+        const targetVariable = differentParameter === "None" ? "" : differentParameter;
+        if (targetVariable && !template.variables.includes(targetVariable)) {
+            setStatus("Choose a valid varying variable for the selected template", "error");
+            return;
+        }
+
+        const rawStart = Number(result["Start Value"]);
+        const rawEnd = Number(result["End Value"]);
+        const rawStep = Number(result["Step Value"]);
+
+        const values: Array<string | null> = [];
+        if (!targetVariable) {
+            values.push(null);
+        } else {
+            if (!Number.isFinite(rawStart) || !Number.isFinite(rawEnd) || !Number.isFinite(rawStep)) {
+                setStatus("Start, end and step must be numbers", "error");
+                return;
+            }
+
+            const start = Math.trunc(rawStart);
+            const end = Math.trunc(rawEnd);
+            const step = Math.trunc(rawStep);
+
+            if (step === 0) {
+                setStatus("Step cannot be 0", "error");
+                return;
+            }
+
+            if (step > 0) {
+                for (let value = start; value <= end; value += step) {
+                    values.push(String(value));
+                    if (values.length > 100) {
+                        break;
+                    }
+                }
+            } else {
+                for (let value = start; value >= end; value += step) {
+                    values.push(String(value));
+                    if (values.length > 100) {
+                        break;
+                    }
+                }
+            }
+
+            if (values.length === 0) {
+                setStatus("No cards generated. Check start/end/step direction", "error");
+                return;
+            }
+        }
+
+        if (values.length > 100) {
+            setStatus("Card tool limit reached (max 100 cards)", "error");
+            return;
+        }
+
+        applyMutation(() => {
+            values.forEach((value) => {
+                const row: Record<string, string> = {};
+                for (const variable of template.variables) {
+                    row[variable] = staticValues[variable] ?? "";
+                }
+                if (targetVariable && value !== null) {
+                    row[targetVariable] = value;
+                }
+                state.doc.sampleRows.push(row);
+                state.doc.rowTemplateIds.push(template.id);
+                state.doc.rowAmounts.push(1);
+            });
+            state.selectedRowIndex = Math.max(0, state.doc.sampleRows.length - 1);
+        });
+
+        if (targetVariable) {
+            setStatus(`Created ${values.length} cards with varying ${targetVariable}`);
+        } else {
+            setStatus(`Created ${values.length} cards with static values`);
+        }
     });
 
     dom.removeRowBtn.addEventListener("click", () => {
@@ -795,39 +917,48 @@ function bindEvents() {
     });
 
     dom.mediaUploadInput.addEventListener("change", handleMediaUpload);
+    initCustomContextMenu();
+    updateGradientPreview();
 
     document.addEventListener("keydown", (event) => {
         if (isTypingTarget(event.target)) {
             return;
         }
 
-        if (event.key === "Delete") {
+        if (event.key === "Delete" || event.key === "Backspace") {
+            event.preventDefault();
             dom?.deleteElementBtn.click();
             return;
         }
 
         if (event.ctrlKey || event.metaKey) {
-            if (event.key.toLowerCase() === "z") {
-                event.preventDefault();
-                undo();
-                return;
-            }
-            if (event.key.toLowerCase() === "y") {
+            const key = event.key.toLowerCase();
+            if (key === "z" && event.shiftKey) {
                 event.preventDefault();
                 redo();
                 return;
             }
-            if (event.key.toLowerCase() === "d") {
+            if (key === "z") {
+                event.preventDefault();
+                undo();
+                return;
+            }
+            if (key === "y") {
+                event.preventDefault();
+                redo();
+                return;
+            }
+            if (key === "d") {
                 event.preventDefault();
                 dom?.duplicateElementBtn.click();
                 return;
             }
-            if (event.key.toLowerCase() === "c") {
+            if (key === "c") {
                 event.preventDefault();
                 copySelectedElement();
                 return;
             }
-            if (event.key.toLowerCase() === "v") {
+            if (key === "v") {
                 event.preventDefault();
                 pasteFromClipboard();
                 return;
@@ -1154,12 +1285,12 @@ function copyActiveTemplate() {
         kind: "template",
         template: clone(getActiveTemplate())
     };
-    setStatus("Sublayout copied");
+    setStatus("Template copied");
 }
 
 function pasteTemplateFromClipboard() {
     if (!state.clipboard || state.clipboard.kind !== "template") {
-        setStatus("Clipboard has no copied sublayout", "error");
+        setStatus("Clipboard has no copied template", "error");
         return;
     }
 
@@ -1177,7 +1308,7 @@ function pasteTemplateFromClipboard() {
         state.selectedElementIndex = templateCopy.spec.layout.length > 0 ? 0 : null;
     });
 
-    setStatus("Sublayout pasted");
+    setStatus("Template pasted");
 }
 
 function pasteFromClipboard() {
@@ -1271,6 +1402,142 @@ function isTypingTarget(target: EventTarget | null): boolean {
     return tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT";
 }
 
+function updateGradientPreview() {
+    if (!dom?.styleGradientPreview) {
+        return;
+    }
+
+    const start = dom.styleGradientStartInput.value || "#4f9f8f";
+    const end = dom.styleGradientEndInput.value || "#f4d8b0";
+    const rawAngle = Number(dom.styleGradientAngleInput.value);
+    const angle = Number.isFinite(rawAngle) ? clampNumber(rawAngle, 0, 360) : 135;
+    dom.styleGradientPreview.style.background = `linear-gradient(${angle}deg, ${start}, ${end})`;
+}
+
+function parseSimpleLinearGradient(value: string): { angle: number; start: string; end: string } | null {
+    const match = value.trim().match(/^linear-gradient\(\s*(-?\d+(?:\.\d+)?)deg\s*,\s*(#[0-9a-f]{3,8}|rgba?\([^)]*\)|[a-z]+)\s*,\s*(#[0-9a-f]{3,8}|rgba?\([^)]*\)|[a-z]+)\s*\)$/i);
+    if (!match) {
+        return null;
+    }
+
+    return {
+        angle: clampNumber(Number(match[1]), 0, 360),
+        start: match[2] || "#4f9f8f",
+        end: match[3] || "#f4d8b0"
+    };
+}
+
+function syncGradientInputsFromBackground(background: string) {
+    if (!dom) {
+        return;
+    }
+
+    const parsed = parseSimpleLinearGradient(background);
+    if (!parsed) {
+        updateGradientPreview();
+        return;
+    }
+
+    syncColorInput(dom.styleGradientStartInput, parsed.start, dom.styleGradientStartInput.value || "#4f9f8f");
+    syncColorInput(dom.styleGradientEndInput, parsed.end, dom.styleGradientEndInput.value || "#f4d8b0");
+    dom.styleGradientAngleInput.value = String(roundTo(parsed.angle, 0));
+    updateGradientPreview();
+}
+
+function initCustomContextMenu() {
+    if (!dom?.contextMenu) {
+        return;
+    }
+
+    dom.contextMenuItems.forEach((item) => {
+        item.addEventListener("click", () => {
+            const action = item.dataset.contextAction;
+            hideCustomContextMenu();
+            if (!action) {
+                return;
+            }
+            runCustomContextAction(action);
+        });
+    });
+
+    document.addEventListener("click", (event) => {
+        if (!dom?.contextMenu || dom.contextMenu.hidden) {
+            return;
+        }
+
+        const target = event.target;
+        if (target instanceof Node && dom.contextMenu.contains(target)) {
+            return;
+        }
+
+        hideCustomContextMenu();
+    });
+
+    document.addEventListener("keydown", (event) => {
+        if (event.key === "Escape") {
+            hideCustomContextMenu();
+        }
+    });
+
+    window.addEventListener("resize", hideCustomContextMenu);
+    window.addEventListener("scroll", hideCustomContextMenu, true);
+}
+
+function runCustomContextAction(action: string) {
+    if (action === "add-text") {
+        dom?.addTextBtn.click();
+    } else if (action === "add-image") {
+        dom?.addImageBtn.click();
+    } else if (action === "paste") {
+        pasteFromClipboard();
+    } else if (action === "copy") {
+        copySelectedElement();
+    } else if (action === "duplicate") {
+        dom?.duplicateElementBtn.click();
+    } else if (action === "delete") {
+        dom?.deleteElementBtn.click();
+    } else if (action === "layer-front") {
+        moveLayer("front");
+    } else if (action === "layer-back") {
+        moveLayer("back");
+    }
+}
+
+function openCustomContextMenu(clientX: number, clientY: number) {
+    if (!dom?.contextMenu) {
+        return;
+    }
+
+    const hasElement = Boolean(getSelectedElement());
+    dom.contextMenuItems.forEach((item) => {
+        const requiresElement = item.dataset.requiresElement === "true";
+        item.disabled = requiresElement && !hasElement;
+    });
+
+    const menu = dom.contextMenu;
+    menu.hidden = false;
+    menu.style.visibility = "hidden";
+    menu.style.left = "0px";
+    menu.style.top = "0px";
+
+    const rect = menu.getBoundingClientRect();
+    const padding = 8;
+    const left = Math.max(padding, Math.min(clientX, window.innerWidth - rect.width - padding));
+    const top = Math.max(padding, Math.min(clientY, window.innerHeight - rect.height - padding));
+
+    menu.style.left = `${left}px`;
+    menu.style.top = `${top}px`;
+    menu.style.visibility = "visible";
+}
+
+function hideCustomContextMenu() {
+    if (!dom?.contextMenu || dom.contextMenu.hidden) {
+        return;
+    }
+
+    dom.contextMenu.hidden = true;
+}
+
 function setSidebarTab(tab: string) {
     if (!dom) {
         return;
@@ -1291,10 +1558,10 @@ async function askTemplateId(): Promise<string | null> {
     }
 
     const templates = state.doc.templates;
-    dom.dialogTitle.textContent = "Select Sublayout";
-    dom.dialogMessage.textContent = "Choose a sublayout for the new row.";
-    dom.dialogSelectLabel.textContent = "Sublayout";
-    dom.dialogConfirmBtn.textContent = "Use Layout";
+    dom.dialogTitle.textContent = "Select Template";
+    dom.dialogMessage.textContent = "Choose a template for the new row.";
+    dom.dialogSelectLabel.textContent = "Template";
+    dom.dialogConfirmBtn.textContent = "Use Template";
     dom.dialogTextField.style.display = "none";
     dom.dialogSelectField.style.display = "flex";
     dom.dialogSelectInput.replaceChildren();
@@ -2117,6 +2384,7 @@ function renderPropertiesPanel() {
         document.querySelector('.no-selection')!.classList.add('hidden');
         syncColorInput(dom.elementColorPickerInput, "#111111", "#111111");
         syncColorInput(dom.elementBgColorPickerInput, "#ffffff", "#ffffff");
+        updateGradientPreview();
         return;
     }
 
@@ -2150,6 +2418,7 @@ function renderPropertiesPanel() {
     syncColorInput(dom.elementColorPickerInput, dom.elementColorInput.value, "#111111");
     syncColorInput(dom.elementBgColorPickerInput, dom.elementBgInput.value, "#ffffff");
     syncColorInput(dom.styleBorderColorPickerInput, dom.styleBorderColorInput.value || "#111111", "#111111");
+    syncGradientInputsFromBackground(dom.elementBgInput.value);
     dom.elementStyleInput.value = stringifyStyles(element.style?.additionalStyles ?? {});
 }
 
@@ -2157,9 +2426,7 @@ function renderDataTable() {
     if (!dom) {
         return;
     }
-    // Replace table with a card grid for each sample row
     dom.dataTable.replaceChildren();
-    // Use the existing container (`#row-card-grid`) as the grid element
     const grid = dom.dataTable as HTMLDivElement;
     grid.classList.add('row-card-grid');
 
@@ -2189,12 +2456,11 @@ function renderDataTable() {
 
         const body = document.createElement('div');
         body.className = 'row-card-body';
-        // show variables for this template
         const vars = tmpl?.variables ?? [];
         vars.forEach((variable) => {
             const p = document.createElement('div');
             p.className = 'row-card-var';
-            p.textContent = `${variable}: ${row[variable] ?? ''}`;
+            p.textContent = `${variable}: ${row[variable]?.toString().slice(0, 30) ?? ''}`;
             body.appendChild(p);
         });
         card.appendChild(body);
@@ -2207,32 +2473,40 @@ function renderDataTable() {
         editBtn.textContent = 'Edit';
         editBtn.addEventListener('click', async (e) => {
             e.stopPropagation();
-            // open modal prefilled with this row's data
-            const templates = state.doc.templates.map((t) => t.name);
+            const templates = state.doc.templates.map((t, index) => `${t.name} (#${index + 1})`);
+            const templateOptionToId: Record<string, string> = {};
+            const templateIdToOption: Record<string, string> = {};
             const variableMap: Record<string, string[]> = {};
-            state.doc.templates.forEach((t) => { variableMap[t.name] = t.variables ?? []; });
+            state.doc.templates.forEach((t, index) => {
+                const option = templates[index] || `${t.name} (#${index + 1})`;
+                templateOptionToId[option] = t.id;
+                templateIdToOption[t.id] = option;
+                variableMap[option] = t.variables ?? [];
+            });
 
             const initial: Record<string, any> = {};
             initial['Amount of Cards'] = getRowAmount(rowIndex);
-            initial['Card Type'] = tmpl ? tmpl.name : templates[0];
+            const currentTemplateOption = tmpl
+                ? (templateIdToOption[tmpl.id] || templates[0] || "")
+                : (templates[0] || "");
+            initial['Card Type'] = currentTemplateOption;
             for (const v of vars) {
-                initial[`Variable: ${v}`] = row[v] ?? '';
+                initial[getCardVariableFieldLabel(currentTemplateOption, v)] = row[v] ?? '';
             }
 
             const result = await openNewCardModal(templates, variableMap, initial);
             if (!result) return;
 
-            const selectedName = String(result['Card Type'] ?? '');
-            const found = state.doc.templates.find((t) => t.name === selectedName) ?? state.doc.templates.find((t) => t.id === selectedName);
+            const selectedOption = String(result['Card Type'] ?? '');
+            const selectedId = templateOptionToId[selectedOption] ?? '';
+            const found = state.doc.templates.find((t) => t.id === selectedId);
             if (!found) return;
 
             applyMutation(() => {
-                // update template id and amount
                 state.doc.rowTemplateIds[rowIndex] = found.id;
                 state.doc.rowAmounts[rowIndex] = Number.isFinite(Number(result['Amount of Cards'])) ? Math.floor(Number(result['Amount of Cards'])) : 1;
-                // update variables for this row
                 for (const v of found.variables) {
-                    const key = `Variable: ${v}`;
+                    const key = getCardVariableFieldLabel(selectedOption, v);
                     const targetRow = state.doc.sampleRows[rowIndex] ?? (state.doc.sampleRows[rowIndex] = {});
                     targetRow[v] = result[key] !== undefined ? String(result[key]) : '';
                 }
@@ -2241,11 +2515,11 @@ function renderDataTable() {
         });
 
         const delBtn = document.createElement('button');
-        delBtn.className = 'btn btn-secondary';
+        delBtn.className = 'btn btn-error';
         delBtn.textContent = 'Delete';
         delBtn.addEventListener('click', (e) => {
             e.stopPropagation();
-            if (!confirm('Delete this row?')) return;
+            if (!confirm('Delete this card?')) return;
             applyMutation(() => {
                 state.doc.sampleRows.splice(rowIndex, 1);
                 state.doc.rowTemplateIds.splice(rowIndex, 1);
@@ -2258,7 +2532,6 @@ function renderDataTable() {
         actions.appendChild(delBtn);
         card.appendChild(actions);
 
-        // click to select
         card.addEventListener('click', () => {
             state.selectedRowIndex = rowIndex;
             renderCanvas();
@@ -2267,14 +2540,14 @@ function renderDataTable() {
 
         grid.appendChild(card);
     });
-
-    // cards have already been appended to `grid` (which is `dom.dataTable`)
 }
 
 function renderCanvas() {
     if (!dom) {
         return;
     }
+
+    hideCustomContextMenu();
 
     dom.renderCard.classList.toggle("single", state.viewMode === "single");
     dom.renderCard.replaceChildren();
@@ -2318,15 +2591,29 @@ function renderCanvas() {
         }
 
         overlay.addEventListener("mousedown", (event) => {
+            if (event.button !== 0) {
+                return;
+            }
             event.stopPropagation();
             state.selectedElementIndex = index;
             startDrag(event, index, "move");
+        });
+
+        overlay.addEventListener("contextmenu", (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            state.selectedElementIndex = index;
+            renderPropertiesPanel();
+            openCustomContextMenu(event.clientX, event.clientY);
         });
 
         ["nw", "ne", "sw", "se"].forEach((dir) => {
             const handle = document.createElement("div");
             handle.className = `resize-handle ${dir}`;
             handle.addEventListener("mousedown", (event) => {
+                if (event.button !== 0) {
+                    return;
+                }
                 event.stopPropagation();
                 state.selectedElementIndex = index;
                 startDrag(event, index, `resize-${dir}` as DragAction);
@@ -2337,10 +2624,24 @@ function renderCanvas() {
         canvas.appendChild(overlay);
     });
 
-    canvas.addEventListener("mousedown", () => {
+    canvas.addEventListener("mousedown", (event) => {
+        if (event.button !== 0) {
+            return;
+        }
         state.selectedElementIndex = null;
         renderPropertiesPanel();
         renderCanvas();
+    });
+
+    canvas.addEventListener("contextmenu", (event) => {
+        const target = event.target;
+        if (target instanceof HTMLElement && target.closest(".editor-overlay")) {
+            return;
+        }
+        event.preventDefault();
+        state.selectedElementIndex = null;
+        renderPropertiesPanel();
+        openCustomContextMenu(event.clientX, event.clientY);
     });
 
     dom.renderCard.appendChild(canvas);

@@ -100,7 +100,7 @@ class Card {
         cardElement.style.boxShadow = "0 1mm 3mm rgba(0, 0, 0, 0.15)";
         cardElement.style.width = `${this._spec.width}mm`;
         cardElement.style.height = `${this._spec.height}mm`;
-        cardElement.style.backgroundColor = this._spec.front.background;
+        cardElement.style.background = this._spec.front.background;
         cardElement.style.color = this._spec.front.textColor;
         this.applyStyles(cardElement, this._spec.front.additionalStyles);
 
@@ -138,7 +138,7 @@ class Card {
             }
 
             if (element.style) {
-                elementDiv.style.backgroundColor = element.style.background;
+                elementDiv.style.background = element.style.background;
                 elementDiv.style.color = element.style.textColor;
                 this.applyStyles(elementDiv, element.style.additionalStyles);
             }

@@ -449,19 +449,108 @@ header h2 {
 
 .utility-gradient-actions {
     display: grid;
-    grid-template-columns: 1fr 1fr 88px auto;
-    gap: 0.4rem;
+    grid-template-columns: 1fr 1fr 92px auto;
+    gap: 0.42rem;
     align-items: center;
+    padding: 0.48rem;
+    border-radius: 0.78rem;
+    border: 1px solid color-mix(in srgb, var(--md-sys-color-outline-variant) 78%, transparent);
+    background: color-mix(in srgb, var(--md-sys-color-surface-container) 78%, transparent);
 }
 
 .utility-gradient-actions input[type="color"],
 .utility-gradient-actions input[type="number"] {
     border: 1px solid var(--md-sys-color-outline-variant);
-    background: var(--md-sys-color-surface-variant);
+    background: color-mix(in srgb, var(--md-sys-color-surface-container-high) 72%, var(--md-sys-color-surface));
     color: var(--text-primary);
     border-radius: 0.55rem;
-    min-height: 2.1rem;
-    padding: 0.15rem 0.45rem;
+    min-height: 2.2rem;
+    padding: 0.2rem 0.45rem;
+}
+
+.utility-gradient-actions input[type="number"] {
+    text-align: center;
+    font-weight: 700;
+    letter-spacing: 0.01em;
+}
+
+.utility-gradient-actions input[type="color"] {
+    width: 100%;
+    padding: 0.12rem;
+    cursor: pointer;
+}
+
+.utility-gradient-actions input[type="color"]::-webkit-color-swatch-wrapper {
+    padding: 0;
+}
+
+.utility-gradient-actions input[type="color"]::-webkit-color-swatch {
+    border: none;
+    border-radius: 0.42rem;
+}
+
+.utility-gradient-actions .btn {
+    min-height: 2.2rem;
+    border-radius: 0.62rem;
+    font-weight: 700;
+}
+
+.style-gradient-preview {
+    grid-column: 1 / -1;
+    min-height: 1.35rem;
+    border-radius: 999px;
+    border: 1px solid color-mix(in srgb, var(--md-sys-color-outline) 36%, transparent);
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.22), 0 4px 10px rgba(0, 0, 0, 0.08);
+}
+
+.designer-context-menu {
+    position: fixed;
+    left: 0;
+    top: 0;
+    min-width: 12.8rem;
+    padding: 0.32rem;
+    border-radius: 0.78rem;
+    border: 1px solid color-mix(in srgb, var(--md-sys-color-outline-variant) 88%, transparent);
+    background: color-mix(in srgb, var(--md-sys-color-surface-container-high) 82%, var(--md-sys-color-surface));
+    box-shadow: 0 14px 30px rgba(11, 19, 29, 0.24);
+    backdrop-filter: blur(8px);
+    display: flex;
+    flex-direction: column;
+    gap: 0.1rem;
+    z-index: 80;
+}
+
+.designer-context-menu[hidden] {
+    display: none;
+}
+
+.designer-context-menu-item {
+    border: none;
+    background: transparent;
+    color: var(--text-primary);
+    border-radius: 0.48rem;
+    text-align: left;
+    padding: 0.44rem 0.5rem;
+    font-size: 0.81rem;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.designer-context-menu-item:hover,
+.designer-context-menu-item:focus-visible {
+    background: color-mix(in srgb, var(--md-sys-color-primary-container) 70%, transparent);
+    outline: none;
+}
+
+.designer-context-menu-item:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+.designer-context-menu-separator {
+    height: 1px;
+    margin: 0.2rem 0.1rem;
+    background: color-mix(in srgb, var(--md-sys-color-outline-variant) 78%, transparent);
 }
 
 #element-text-field,
@@ -553,6 +642,21 @@ header h2 {
 .btn.btn-ghost:active {
     background: rgba(0, 0, 0, 0.05);
 }
+
+/* error button */
+.btn.btn-error {
+    background: rgba(156, 20, 31, 0.94);
+    color: rgba(234, 196, 200, 0.94);
+}
+
+.btn.btn-error:hover {
+    background: rgba(140, 18, 28, 0.98);
+}
+
+.btn.btn-error:active {
+    background: rgba(140, 18, 28, 1);
+}
+
 
 /* Row card grid for sample rows */
 .row-card-grid {
@@ -1037,6 +1141,14 @@ header h2 {
 
     .utility-gradient-actions {
         grid-template-columns: 1fr 1fr;
+    }
+
+    .utility-gradient-actions input[type="number"] {
+        grid-column: 1 / span 1;
+    }
+
+    .utility-gradient-actions .btn {
+        grid-column: 2 / span 1;
     }
 
     .header-info h2 {

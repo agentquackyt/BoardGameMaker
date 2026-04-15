@@ -17,6 +17,7 @@ interface ModalField {
 interface ConditionalField {
     conditionLabel: string;
     conditionValue: any;
+    operator?: 'equals' | 'not-equals';
 }
 
 
@@ -125,13 +126,13 @@ class Modal {
         return this;
     }
 
-    setConditionalField(label: string, conditionLabel: string, conditionValue: any): Modal {
+    setConditionalField(label: string, conditionLabel: string, conditionValue: any, operator: 'equals' | 'not-equals' = 'equals'): Modal {
         const field = this.fields.find(f => f.label === label);
         if (field) {
             if (!field.condition) {
                 field.condition = [];
             }
-            field.condition.push({ conditionLabel, conditionValue });
+            field.condition.push({ conditionLabel, conditionValue, operator });
         }
         return this;
     }
@@ -274,7 +275,11 @@ class Modal {
                                 relatedValue = relatedField.value;
                             }
 
-                            if (relatedValue != condition.conditionValue) {
+                            const operator = condition.operator ?? 'equals';
+                            const matches = operator === 'not-equals'
+                                ? relatedValue != condition.conditionValue
+                                : relatedValue == condition.conditionValue;
+                            if (!matches) {
                                 shouldShow = false;
                                 break;
                             }
@@ -315,6 +320,57 @@ class Modal {
                     }
                 }
             }
+        });
+
+        // Re-wire conditional visibility after all fields exist in the DOM.
+        fields.forEach((field) => {
+            if (!field.condition || field.condition.length === 0) {
+                return;
+            }
+
+            const currentLabel = modalBody.querySelector(`label[data-field-label="${field.label}"]`) as HTMLElement | null;
+            if (!currentLabel) {
+                return;
+            }
+
+            const updateVisibility = () => {
+                let shouldShow = true;
+                for (const condition of field.condition!) {
+                    const selector = `label[data-field-label="${condition.conditionLabel}"] input, label[data-field-label="${condition.conditionLabel}"] select`;
+                    const relatedField = modalBody.querySelector(selector) as HTMLInputElement | HTMLSelectElement | null;
+                    if (!relatedField) {
+                        continue;
+                    }
+
+                    const relatedValue = relatedField.type === 'checkbox'
+                        ? (relatedField as HTMLInputElement).checked
+                        : relatedField.value;
+
+                    const operator = condition.operator ?? 'equals';
+                    const matches = operator === 'not-equals'
+                        ? relatedValue != condition.conditionValue
+                        : relatedValue == condition.conditionValue;
+
+                    if (!matches) {
+                        shouldShow = false;
+                        break;
+                    }
+                }
+
+                currentLabel.style.display = shouldShow ? '' : 'none';
+            };
+
+            field.condition.forEach((condition) => {
+                const selector = `label[data-field-label="${condition.conditionLabel}"] input, label[data-field-label="${condition.conditionLabel}"] select`;
+                const relatedField = modalBody.querySelector(selector) as HTMLInputElement | HTMLSelectElement | null;
+                if (!relatedField) {
+                    return;
+                }
+                relatedField.addEventListener('input', updateVisibility);
+                relatedField.addEventListener('change', updateVisibility);
+            });
+
+            updateVisibility();
         });
 
         return modalBody;

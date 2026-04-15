@@ -52,9 +52,9 @@
                     <button type="button" class="header-menu-item" role="menuitem" data-menu="edit"
                         data-action="paste-element">Paste Element</button>
                     <button type="button" class="header-menu-item" role="menuitem" data-menu="edit"
-                        data-action="copy-template">Copy Sublayout</button>
+                        data-action="copy-template">Copy Template</button>
                     <button type="button" class="header-menu-item" role="menuitem" data-menu="edit"
-                        data-action="paste-template">Paste Sublayout</button>
+                        data-action="paste-template">Paste Template </button>
                     <button type="button" class="header-menu-item" role="menuitem" data-menu="edit"
                         data-action="duplicate-element">Duplicate Element</button>
                     <button type="button" class="header-menu-item" role="menuitem" data-menu="edit"
@@ -92,9 +92,9 @@
             </div>
 
             <section class="tab-content active" data-sidebar-content="document">
-                <h3>Sublayouts</h3>
+                <h3>Template</h3>
                 <label class="field">
-                    <span>Active Sublayout</span>
+                    <span>Active Template</span>
                     <select id="template-select"></select>
                 </label>
                 <div class="inline-actions wrap">
@@ -246,6 +246,7 @@
                     </div>
 
                     <div class="inline-actions wrap utility-gradient-actions">
+                        <div class="style-gradient-preview" id="style-gradient-preview" aria-hidden="true"></div>
                         <input type="color" id="style-gradient-start-input" value="#4f9f8f" aria-label="Gradient start color">
                         <input type="color" id="style-gradient-end-input" value="#f4d8b0" aria-label="Gradient end color">
                         <input type="number" id="style-gradient-angle-input" value="135" min="0" max="360" step="1" aria-label="Gradient angle">
@@ -277,8 +278,9 @@
                     <div id="row-card-grid" class="row-card-grid"></div>
                 </div>
                 <div class="inline-actions">
-                    <button class="btn btn-ghost" id="add-row-btn">Add Row</button>
-                    <button class="btn btn-ghost" id="remove-row-btn">Remove Row</button>
+                    <button class="btn btn-primary" id="add-row-btn">Create Card</button>
+                    <button class="btn btn-primary" id="card-tool-btn">Card Tool (advanced)</button>
+                    <button class="btn btn-error hidden" id="remove-row-btn">Remove Card</button>
                 </div>
             </section>
         </aside>
@@ -323,6 +325,18 @@
             </div>
         </form>
     </dialog>
+    <div id="designer-context-menu" class="designer-context-menu" role="menu" hidden>
+        <button type="button" class="designer-context-menu-item" data-context-action="add-text" role="menuitem">Add Text</button>
+        <button type="button" class="designer-context-menu-item" data-context-action="add-image" role="menuitem">Add Image</button>
+        <button type="button" class="designer-context-menu-item" data-context-action="paste" role="menuitem">Paste</button>
+        <div class="designer-context-menu-separator" aria-hidden="true"></div>
+        <button type="button" class="designer-context-menu-item" data-context-action="copy" data-requires-element="true" role="menuitem">Copy Element</button>
+        <button type="button" class="designer-context-menu-item" data-context-action="duplicate" data-requires-element="true" role="menuitem">Duplicate Element</button>
+        <button type="button" class="designer-context-menu-item" data-context-action="delete" data-requires-element="true" role="menuitem">Delete Element</button>
+        <div class="designer-context-menu-separator" aria-hidden="true"></div>
+        <button type="button" class="designer-context-menu-item" data-context-action="layer-front" data-requires-element="true" role="menuitem">Bring To Front</button>
+        <button type="button" class="designer-context-menu-item" data-context-action="layer-back" data-requires-element="true" role="menuitem">Send To Back</button>
+    </div>
     <div id="toast-stack" class="toast-stack" aria-live="polite" aria-atomic="false"></div>
     <script src="./entry.ts"></script>
 </body>
