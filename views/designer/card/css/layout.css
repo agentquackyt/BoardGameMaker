@@ -1189,3 +1189,33 @@ header h2 {
 .no-selection.hidden {
     display: none;
 }
+
+.btn.material-symbols-rounded:not(.btn-error) {
+    font-size: 25px;
+    aspect-ratio: 1 / 1;
+    padding: 5px;
+    border-radius: 10px;
+    border: none;
+    background: transparent;
+    color: var(--text-secondary);
+}
+
+.btn.btn-error.material-symbols-rounded {
+    font-size: 25px;
+    aspect-ratio: 1 / 1;
+    padding: 5px;
+    border-radius: 10px;
+    background: transparent;
+    color: rgba(225, 142, 150, 0.94);
+}
+
+.icon-btn-group {
+    background: var(--background-secondary);
+    border: 1px solid var(--md-sys-color-outline-variant);
+    display: flex;
+    flex-direction: row;
+    border-radius: .5rem;
+    padding: 0.2rem;
+    gap: .75rem;
+    flex-grow: 0;
+}

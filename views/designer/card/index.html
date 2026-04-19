@@ -7,7 +7,7 @@
     <title>Card Designer</title>
     <link rel="stylesheet" href="./css/index.css">
     <link rel="stylesheet"
-        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@40,400,1,0&icon_names=redo,undo" />
+        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@40,400,1,0&icon_names=add,add_photo_alternate,copy_all,delete,edit_document,redo,undo" />
 </head>
 
 <body>
@@ -97,11 +97,11 @@
                     <span>Active Template</span>
                     <select id="template-select"></select>
                 </label>
-                <div class="inline-actions wrap">
-                    <button class="btn btn-primary" id="add-template-btn">Add</button>
-                    <button class="btn btn-primary" id="rename-template-btn">Edit</button>
-                    <button class="btn btn-ghost" id="duplicate-template-btn">Duplicate</button>
-                    <button class="btn btn-error" id="delete-template-btn">Delete</button>
+                <div class="inline-actions wrap icon-btn-group">
+                    <button class="btn btn-primary material-symbols-rounded" id="add-template-btn">add</button>
+                    <button class="btn btn-primary material-symbols-rounded" id="rename-template-btn">edit_document</button>
+                    <button class="btn btn-ghost material-symbols-rounded" id="duplicate-template-btn">copy_all</button>
+                    <button class="btn btn-error material-symbols-rounded" id="delete-template-btn">delete</button>
                 </div>
 
                 <div class="divider"></div>
@@ -118,11 +118,11 @@
 
             <section class="tab-content" data-sidebar-content="elements">
                 <h3>Layout Elements</h3>
-                <div class="inline-actions wrap">
-                    <button class="btn btn-primary" id="add-text-btn">Add Text</button>
-                    <button class="btn btn-primary" id="add-image-btn">Add Image</button>
-                    <button class="btn btn-ghost" id="duplicate-element-btn">Duplicate</button>
-                    <button class="btn btn-ghost" id="delete-element-btn">Delete</button>
+                <div class="inline-actions wrap icon-btn-group">
+                    <button class="btn btn-primary material-symbols-rounded" id="add-text-btn">add</button>
+                    <button class="btn btn-primary material-symbols-rounded" id="add-image-btn">add_photo_alternate</button>
+                    <button class="btn btn-ghost material-symbols-rounded" id="duplicate-element-btn">copy_all</button>
+                    <button class="btn btn-ghost material-symbols-rounded btn-error" id="delete-element-btn">delete</button>
                 </div>
 
                 <div class="divider"></div>

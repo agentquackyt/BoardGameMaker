@@ -2583,8 +2583,8 @@ function renderDataTable() {
         actions.className = 'row-card-actions';
 
         const editBtn = document.createElement('button');
-        editBtn.className = 'btn btn-primary';
-        editBtn.textContent = 'Edit';
+        editBtn.className = 'btn material-symbols-rounded';
+        editBtn.textContent = 'edit_document';
         editBtn.addEventListener('click', async (e) => {
             e.stopPropagation();
             const templates = state.doc.templates.map((t, index) => `${t.name} (#${index + 1})`);
@@ -2629,8 +2629,8 @@ function renderDataTable() {
         });
 
         const delBtn = document.createElement('button');
-        delBtn.className = 'btn btn-error';
-        delBtn.textContent = 'Delete';
+        delBtn.className = 'btn btn-error material-symbols-rounded';
+        delBtn.textContent = 'delete';
         delBtn.addEventListener('click', (e) => {
             e.stopPropagation();
             applyMutation(() => {
